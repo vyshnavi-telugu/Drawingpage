@@ -1,6 +1,6 @@
 const drawings = [
   /* Replace each placeholder URL with your hosted image link */
-  'https://i.postimg.cc/https://postimage.me/images/2025/06/18/1000072875.jpg/mermaid.png',
+  'https://postimage.me/images/2025/06/18/1000072875.jpg',
   'https://i.postimg.cc/https://postimage.me/images/2025/06/18/1000072873.jpg/unicorn1.png',
   'https://i.postimg.cc/https://postimage.me/images/2025/06/18/1000072874.jpg/princess-dog.png',
   'https://i.postimg.cc/XYZ/unicorn2.png',
