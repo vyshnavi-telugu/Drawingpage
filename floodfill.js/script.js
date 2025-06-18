@@ -74,12 +74,15 @@ canvas.onmousedown = e => {
   drawing = true;
   const { x, y } = getXY(e);
   if (currentTool === 'bucket') {
-    floodFill(x, y, drawColor);
+    const tol = 32; // adjust to fill anti-aliased/gray edges
+    ctx.fillStyle = drawColor;
+    ctx.fillFlood(x, y, tol);
     pushUndo();
   } else {
     ctx.beginPath();
     ctx.moveTo(x, y);
   }
+};
 };
 canvas.onmousemove = draw;
 canvas.onmouseup = () => {
