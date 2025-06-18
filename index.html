@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Coloring Book with Built‑In Images</title>
+  <style>
+    body { display:flex; margin:0; font-family:sans-serif; }
+    #sidebar { width:200px; padding:10px; background:#f0f0f0; }
+    #canvas-wrap { flex:1; position:relative; }
+    canvas { border:1px solid #ccc; }
+    .btn, .tool, .color { margin:5px; cursor:pointer; padding:5px; }
+    .active { border:2px solid red; }
+    .color { width:24px; height:24px; }
+  </style>
+</head>
+<body>
+  <div id="sidebar">
+    <h4>Pages</h4><div id="pages"></div>
+    <h4>Tools</h4><div id="tools">
+      <div class="tool" data-tool="brush">Brush</div>
+      <div class="tool" data-tool="crayon">Crayon</div>
+      <div class="tool" data-tool="bucket">Bucket</div>
+      <div class="tool" data-tool="eraser">Eraser</div>
+    </div>
+    <h4>Colors</h4><div id="colors"></div>
+    <button id="undo" class="btn">Undo</button>
+    <button id="redo" class="btn">Redo</button>
+    <button id="save" class="btn">Save Image</button>
+  </div>
+  <div id="canvas-wrap">
+    <canvas id="drawCanvas" width="600" height="600"></canvas>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
