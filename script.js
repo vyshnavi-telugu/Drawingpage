@@ -8,6 +8,13 @@ const drawings = [
   'https://i.postimg.cc/XYZ/princess-full.png'
 ];
 
+// Preload all drawing pages
+const imgs = drawings.map(src => {
+  const im = new Image();
+  im.src = src;
+  return im;
+});
+
 const canvas = document.getElementById('drawCanvas');
 const ctx = canvas.getContext('2d');
 let currentTool = 'brush', drawColor = 'black', drawing = false;
@@ -26,8 +33,11 @@ drawings.forEach((src, idx) => {
   pagesEl.appendChild(btn);
 });
 
-// Color swatches
-['black', 'red', 'green', 'blue', 'orange'].forEach(c => {
+const colorNames = [
+  'black','red','orange','yellow','green','blue',
+  'indigo','violet','brown','gray'
+];
+colorNames.forEach(c => {
   const div = document.createElement('div');
   div.className = 'color';
   div.style.background = c;
@@ -79,15 +89,21 @@ canvas.onmouseup = () => {
   }
   drawing = false;
 };
+canvas.ontouchstart = e => canvas.onmousedown(e.touches[0]);
+canvas.ontouchmove  = e => draw(e.touches[0]);
+canvas.ontouchend   = () => canvas.onmouseup();
 
-function loadPage(index, clearHistory = true) {
-  if (clearHistory) undoStack.length = redoStack.length = 0;
-  img.src = drawings[index];
-  img.onload = () => {
+function loadPage(idx, clearHistory = true) {
+  if (clearHistory) {
+    undoStack.length = redoStack.length = 0;
+  }
+  const im = imgs[idx];
+  im.onload = () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(im, 0, 0, canvas.width, canvas.height);
     pushUndo();
   };
+  if (im.complete) im.onload(); // draw immediately if already loaded
 }
 
 function draw(e, end=false) {
@@ -111,27 +127,33 @@ function getXY(e) {
   const rect = canvas.getBoundingClientRect();
   return { x: e.clientX - rect.left, y: e.clientY - rect.top };
 }
-
 function floodFill(sx, sy, newColor) {
   const w = canvas.width, h = canvas.height;
   const imgData = ctx.getImageData(0, 0, w, h);
   const d = imgData.data;
-  const idx = (sy * w + sx) * 4;
-  const orig = d.slice(idx, idx+4);
+  const idx0 = (sy * w + sx) * 4;
+  const orig = d.slice(idx0, idx0 + 4);
   const fill = colorToRGBA(newColor);
-  if (orig.every((v, i) => v === fill[i])) return;
+  const tol = 50; // adjust tolerance as needed
+
   const stack = [[sx, sy]];
   while (stack.length) {
     const [x, y] = stack.pop();
-    if (x<0||y<0||x>=w||y>=h) continue;
-    const pos = (y*w + x)*4;
-    if (!orig.every((v, i) => v === d[pos+i])) continue;
+    if (x < 0 || y < 0 || x >= w || y >= h) continue;
+    const pos = (y * w + x) * 4;
+    if (
+      Math.abs(d[pos] - orig[0]) >= tol ||
+      Math.abs(d[pos + 1] - orig[1]) >= tol ||
+      Math.abs(d[pos + 2] - orig[2]) >= tol
+    ) continue;
     for (let i = 0; i < 3; i++) d[pos + i] = fill[i];
-    d[pos+3] = 255;
-    stack.push([x+1,y],[x-1,y],[x,y+1],[x,y-1]);
+    d[pos + 3] = 255;
+    stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
   }
+
   ctx.putImageData(imgData, 0, 0);
 }
+
 
 function colorToRGBA(c) {
   const tmp = document.createElement('div');
