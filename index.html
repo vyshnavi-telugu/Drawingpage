@@ -1,32 +1,218 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Ultimate Coloring Game</title>
+  <meta charset="UTF-8" />
+  <title>Coloring Book</title>
   <style>
-    body { text-align:center; font-family:sans-serif; margin:0; padding:0; }
-    #palette, #controls { margin:10px; }
-    .color-btn { width:30px;height:30px;display:inline-block;margin:2px;cursor:pointer;border:1px solid #333; }
-    canvas { border:1px solid #333; touch-action:none; }
+    body { display: flex; margin: 0; font-family: sans-serif; }
+    #sidebar { width: 200px; padding: 10px; background: #f0f0f0; }
+    #canvas-wrap { flex: 1; position: relative; }
+    canvas { border: 1px solid #ccc; }
+    .btn, .tool, .color { margin: 5px; cursor: pointer; padding: 5px; }
+    .active { border: 2px solid red; }
+    .color { width: 24px; height: 24px; display: inline-block; }
   </style>
 </head>
 <body>
-  <h1>Ultimate Coloring Game</h1>
-  <div id="palette"></div>
-  <div id="controls">
-    <select id="tool">
-      <option value="fill">Fill</option>
-      <option value="brush">Brush</option>
-    </select>
-    <button id="undo">Undo</button>
-    <button id="redo">Redo</button>
-    <button id="save">Save PNG</button>
+  <div id="sidebar">
+    <h4>Pages</h4><div id="pages"></div>
+    <h4>Tools</h4><div id="tools">
+      <div class="tool" data-tool="brush">Brush</div>
+      <div class="tool" data-tool="crayon">Crayon</div>
+      <div class="tool" data-tool="bucket">Bucket</div>
+      <div class="tool" data-tool="eraser">Eraser</div>
+    </div>
+    <h4>Colors</h4><div id="colors"></div>
+    <button id="undo" class="btn">Undo</button>
+    <button id="redo" class="btn">Redo</button>
+    <button id="save" class="btn">Save Image</button>
   </div>
-  <canvas id="canvas" width="600" height="600"></canvas>
+  <div id="canvas-wrap">
+    <canvas id="drawCanvas" width="600" height="600"></canvas>
+  </div>
+  <script>
+  const drawings = [
+    /* set your real URLs */
+    'https://i.postimg.cc/XYZ/mermaid.png',
+    'https://i.postimg.cc/XYZ/unicorn1.png',
+    'https://i.postimg.cc/XYZ/princess-dog.png',
+    'https://i.postimg.cc/XYZ/unicorn2.png',
+    'https://i.postimg.cc/XYZ/pikachu-love.png',
+    'https://i.postimg.cc/XYZ/portrait-lineart.png',
+    'https://i.postimg.cc/XYZ/princess-full.png'
+  ];
 
-  <script src="floodfill.min.js"></script>
-  <script src="easy-brush.min.js"></script>
-  <script src="worker-fill.min.js"></script>
-  <script src="game.min.js"></script>
+  const canvas = document.getElementById('drawCanvas');
+  const ctx = canvas.getContext('2d');
+  let currentTool = 'brush', drawColor = 'black', drawing = false;
+  const img = new Image();
+  const undoStack = [], redoStack = [];
+
+  const toolsEl = document.getElementById('tools');
+  const colorsEl = document.getElementById('colors');
+  const pagesEl = document.getElementById('pages');
+
+  // Pages
+  drawings.forEach((src, idx) => {
+    const btn = document.createElement('button');
+    btn.textContent = 'Page ' + (idx + 1);
+    btn.onclick = () => loadPage(idx, true);
+    pagesEl.appendChild(btn);
+  });
+
+  // Colors
+  ['black','red','green','blue','orange'].forEach(c => {
+    const d = document.createElement('div');
+    d.className = 'color'; d.style.background = c;
+    d.dataset.color = c;
+    colorsEl.appendChild(d);
+  });
+
+  toolsEl.addEventListener('click', e => {
+    if (e.target.dataset.tool) {
+      currentTool = e.target.dataset.tool;
+      [...toolsEl.children].forEach(el => el.classList.toggle('active', el === e.target));
+    }
+  });
+
+  colorsEl.addEventListener('click', e => {
+    if (e.target.dataset.color) {
+      drawColor = e.target.dataset.color;
+      [...colorsEl.children].forEach(el => el.classList.toggle('active', el === e.target));
+    }
+  });
+
+  document.getElementById('undo').onclick = undo;
+  document.getElementById('redo').onclick = redo;
+  document.getElementById('save').onclick = saveImage;
+
+  loadPage(0, false);
+
+  // Drawing events
+  canvas.onmousedown = e => {
+    drawing = true;
+    const p = getXY(e);
+    if (currentTool === 'bucket') {
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      floodFill(imageData, drawColor, p.x, p.y);
+      ctx.putImageData(imageData, 0, 0);
+      pushUndo();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+    }
+  };
+  canvas.onmousemove = draw;
+  canvas.onmouseup = () => {
+    if (drawing && currentTool !== 'bucket') {
+      draw(undefined, true);
+      pushUndo();
+    }
+    drawing = false;
+  };
+
+  function loadPage(i, clearHist) {
+    if (clearHist) { undoStack.length = redoStack.length = 0; }
+    img.src = drawings[i];
+    img.onload = () => {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      pushUndo();
+    };
+  }
+
+  function draw(e, finish = false) {
+    if (!drawing) return;
+    const {x,y} = getXY(e);
+    if (currentTool === 'eraser') {
+      ctx.strokeStyle = 'white'; ctx.lineWidth = 20;
+    } else {
+      ctx.strokeStyle = drawColor;
+      ctx.lineWidth = currentTool === 'brush' ? 5 : 15;
+      ctx.globalAlpha = currentTool === 'crayon' ? 0.3 : 1;
+    }
+    ctx.lineCap = currentTool === 'brush' ? 'round' : 'square';
+    ctx.lineTo(x,y);
+    ctx.stroke();
+    if (finish) ctx.globalAlpha = 1;
+  }
+
+  function getXY(e) {
+    const r = canvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+
+  // Efficient flood fill (scanline algorithm) 1
+  function floodFill(imageData, newColor, startX, startY) {
+    const data = imageData.data, w = imageData.width, h = imageData.height;
+    const idx = (startY*w + startX)*4;
+    const base = data.slice(idx,idx+4);
+    const nc = colorToRGBA(newColor);
+    if (base.every((v,i)=>v===nc[i])) return;
+    const stack = [{x:startX, y:startY}];
+    while (stack.length) {
+      const {x,y} = stack.pop();
+      let y1 = y;
+      while (y1>=0 && match(y1,x,base)) y1--;
+      y1++;
+      let spanLeft=false, spanRight=false;
+      while (y1<h && match(y1,x,base)) {
+        const pos = (y1*w + x)*4;
+        for (let i=0;i<4;i++) data[pos+i] = nc[i];
+        if (x>0) {
+          if (match(y1,x-1,base) && !spanLeft) { stack.push({x:x-1,y:y1}); spanLeft=true; }
+          else if (!match(y1,x-1,base)) spanLeft=false;
+        }
+        if (x<w-1) {
+          if (match(y1,x+1,base) && !spanRight) { stack.push({x:x+1,y:y1}); spanRight=true; }
+          else if (!match(y1,x+1,base)) spanRight=false;
+        }
+        y1++;
+      }
+    }
+  }
+  function match(y,x,base) {
+    const pos=(y*imageData.width + x)*4;
+    return data[pos]===base[0] && data[pos+1]===base[1] &&
+           data[pos+2]===base[2] && data[pos+3]===base[3];
+  }
+  function colorToRGBA(c){
+    const tmp = document.createElement('div');
+    tmp.style.color = c;
+    document.body.appendChild(tmp);
+    const [r,g,b] = getComputedStyle(tmp).color.match(/\d+/g);
+    document.body.removeChild(tmp);
+    return [+r,+g,+b,255];
+  }
+
+  function pushUndo(){
+    undoStack.push(canvas.toDataURL());
+    if (undoStack.length>50) undoStack.shift();
+    redoStack.length = 0;
+  }
+  function restore(d){
+    const i = new Image(); i.src = d;
+    i.onload = ()=> ctx.drawImage(i,0,0);
+  }
+  function undo(){
+    if (undoStack.length>1) {
+      redoStack.push(undoStack.pop());
+      restore(undoStack[undoStack.length-1]);
+    }
+  }
+  function redo(){
+    if (redoStack.length) {
+      const d = redoStack.pop();
+      undoStack.push(d);
+      restore(d);
+    }
+  }
+  function saveImage(){
+    const a = document.createElement('a');
+    a.download = 'coloring.png';
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+  }
+  </script>
 </body>
 </html>
