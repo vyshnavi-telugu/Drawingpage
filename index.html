@@ -1,36 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Coloring Book with Built‑In Images</title>
-  <style>
-    body { display:flex; margin:0; font-family:sans-serif; }
-    #sidebar { width:200px; padding:10px; background:#f0f0f0; }
-    #canvas-wrap { flex:1; position:relative; }
-    canvas { border:1px solid #ccc; }
-    .btn, .tool, .color { margin:5px; cursor:pointer; padding:5px; }
-    .active { border:2px solid red; }
-    .color { width:24px; height:24px; }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Coloring Game</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="sidebar">
-    <h4>Pages</h4><div id="pages"></div>
-    <h4>Tools</h4><div id="tools">
-      <div class="tool" data-tool="brush">Brush</div>
-      <div class="tool" data-tool="crayon">Crayon</div>
-      <div class="tool" data-tool="bucket">Bucket</div>
-      <div class="tool" data-tool="eraser">Eraser</div>
-    </div>
-    <h4>Colors</h4><div id="colors"></div>
-    <button id="undo" class="btn">Undo</button>
-    <button id="redo" class="btn">Redo</button>
-    <button id="save" class="btn">Save Image</button>
+  <h1>🎨 Coloring Book</h1>
+  <div id="drawing-book">
+    <button onclick="loadImage('drawing1')">Page 1</button>
+    <button onclick="loadImage('drawing2')">Page 2</button>
   </div>
-  <div id="canvas-wrap">
-    <canvas id="drawCanvas" width="600" height="600"></canvas>
+  <canvas id="canvas" width="600" height="600"></canvas>
+
+  <div class="palette">
+    <div class="color" style="background: red;" onclick="setColor('red')"></div>
+    <div class="color" style="background: orange;" onclick="setColor('orange')"></div>
+    <div class="color" style="background: yellow;" onclick="setColor('yellow')"></div>
+    <div class="color" style="background: green;" onclick="setColor('green')"></div>
+    <div class="color" style="background: blue;" onclick="setColor('blue')"></div>
+    <div class="color" style="background: purple;" onclick="setColor('purple')"></div>
+    <div class="color" style="background: white;" onclick="setColor('white')"></div>
   </div>
-  <script src="https://unpkg.com/floodfill-js@1.0.2/floodfill.min.js"></script>
-<script src="script.js"></script>
+
+  <script src="floodfill.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
