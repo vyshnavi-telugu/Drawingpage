@@ -1,30 +1,28 @@
+<!-- index.html -->
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Coloring Game</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <title>RGB Color Guessing Game</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>🎨 Coloring Book</h1>
-  <div id="drawing-book">
-    <button onclick="loadImage('drawing1')">Page 1</button>
-    <button onclick="loadImage('drawing2')">Page 2</button>
+  <h1>The Great <span id="color-display">RGB</span> Guessing Game</h1>
+  <div id="stripe">
+    <button id="reset">New Colors</button>
+    <span id="message"></span>
+    <button class="mode">Easy</button>
+    <button class="mode selected">Hard</button>
   </div>
-  <canvas id="canvas" width="600" height="600"></canvas>
-
-  <div class="palette">
-    <div class="color" style="background: red;" onclick="setColor('red')"></div>
-    <div class="color" style="background: orange;" onclick="setColor('orange')"></div>
-    <div class="color" style="background: yellow;" onclick="setColor('yellow')"></div>
-    <div class="color" style="background: green;" onclick="setColor('green')"></div>
-    <div class="color" style="background: blue;" onclick="setColor('blue')"></div>
-    <div class="color" style="background: purple;" onclick="setColor('purple')"></div>
-    <div class="color" style="background: white;" onclick="setColor('white')"></div>
+  <div id="container">
+    <div class="square"></div>
+    <div class="square"></div>
+    <div class="square"></div>
+    <div class="square"></div>
+    <div class="square"></div>
+    <div class="square"></div>
   </div>
-
-  <script src="floodfill.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
+
