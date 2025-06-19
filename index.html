@@ -1,98 +1,94 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Coloring Book</title>
+  <meta charset="UTF-8" />
+  <title>Coloring Game</title>
   <style>
     body { display:flex; margin:0; font-family:sans-serif; }
     #sidebar { width:200px; padding:10px; background:#f0f0f0; }
-    #canvas-wrap { flex:1; position:relative; }
-    canvas { border:1px solid #ccc; }
-    .btn, .tool, .color { margin:5px; cursor:pointer; padding:5px; }
-    .active { border:2px solid red; }
-    .color { width:24px; height:24px; display:inline-block; }
+    #canvas-wrap { flex:1; }
+    canvas { border:1px solid #ccc; cursor: crosshair; }
+    .tool, .color, .btn { margin:5px; padding:5px; cursor:pointer; display:inline-block; }
+    .active { border:2px solid red !important; }
+    .color { width:24px; height:24px; }
   </style>
 </head>
 <body>
   <div id="sidebar">
     <h4>Pages</h4><div id="pages"></div>
-    <h4>Tools</h4><div id="tools">
+    <h4>Tools</h4>
+    <div id="tools">
       <div class="tool" data-tool="brush">Brush</div>
       <div class="tool" data-tool="crayon">Crayon</div>
       <div class="tool" data-tool="bucket">Bucket</div>
       <div class="tool" data-tool="eraser">Eraser</div>
     </div>
     <h4>Colors</h4><div id="colors"></div>
-    <button id="undo" class="btn">Undo</button>
-    <button id="redo" class="btn">Redo</button>
-    <button id="save" class="btn">Save</button>
+    <div>
+      <button id="undo" class="btn">Undo</button>
+      <button id="redo" class="btn">Redo</button>
+      <button id="save" class="btn">Save</button>
+    </div>
   </div>
-  <div id="canvas-wrap">
-    <canvas id="drawCanvas" width="600" height="600"></canvas>
-  </div>
+  <div id="canvas-wrap"><canvas id="drawCanvas" width="600" height="600"></canvas></div>
 
   <script>
-  const drawings = [/* your image URLs here, must allow CORS */];
+  // Your image URLs, ensure they support CORS
+  const drawings = [
+    'https://i.postimg.cc/XYZ/mermaid.png',
+    // ... other URLs
+  ];
 
   const canvas = document.getElementById('drawCanvas');
   const ctx = canvas.getContext('2d');
-  let tool = 'brush', color = 'black', drawing = false;
+  let tool='brush', color='black', drawing=false;
   const img = new Image();
-  const undoStack = [], redoStack = [];
-
-  // Enable CORS for images
   img.crossOrigin = 'anonymous';
 
-  // Populate UI
-  ['brush','crayon','bucket','eraser'].forEach(t => {
+  const undoStack=[], redoStack=[];
+  const toolsEl = document.getElementById('tools');
+  const colorsEl = document.getElementById('colors');
+  const pagesEl = document.getElementById('pages');
+
+  // UI setup
+  drawings.forEach((src,i)=>{
+    const btn=document.createElement('button');
+    btn.textContent='Page '+(i+1);
+    btn.onclick=()=>loadPage(i,true);
+    pagesEl.appendChild(btn);
+  });
+
+  ['brush','crayon','bucket','eraser'].forEach(t=>{
     const d = document.querySelector(`.tool[data-tool="${t}"]`);
-    d.onclick = () => { tool = t; updateActive(); };
+    d.onclick=()=>{ tool=t; updateActive(); };
   });
-  ['black','red','green','blue','orange'].forEach(c => {
-    const d = document.createElement('div');
-    d.className='color'; d.style.background=c; d.onclick=()=>{color=c;updateActive();};
-    document.getElementById('colors').appendChild(d);
+  ['black','red','green','blue','orange'].forEach(c=>{
+    const d=document.createElement('div');
+    d.className='color';
+    d.style.background=c;
+    d.onclick=()=>{ color=c; updateActive(); };
+    colorsEl.appendChild(d);
   });
-  document.getElementById('undo').onclick = undo;
-  document.getElementById('redo').onclick = redo;
-  document.getElementById('save').onclick = () => {
-    const a = document.createElement('a');
-    a.download = 'drawing.png';
-    a.href = canvas.toDataURL();
+
+  document.getElementById('undo').onclick=undo;
+  document.getElementById('redo').onclick=redo;
+  document.getElementById('save').onclick=()=>{ 
+    const a=document.createElement('a');
+    a.download='coloring.png';
+    a.href=canvas.toDataURL();
     a.click();
   };
 
-  drawings.forEach((src,i)=>{
-    const btn=document.createElement('button');
-    btn.textContent=`Page ${i+1}`;
-    btn.onclick = ()=>loadPage(i,true);
-    document.getElementById('pages').appendChild(btn);
-  });
+  updateActive();
+  loadPage(0,false);
 
-  function updateActive(){
-    document.querySelectorAll('.tool').forEach(d=>d.classList.toggle('active', d.dataset.tool===tool));
-    document.querySelectorAll('.color').forEach(d=>d.classList.toggle('active', d.style.backgroundColor===color));
-  }
-
-  function loadPage(i,clear=true){
-    if(clear){undoStack.length=redoStack.length=0;}
-    img.onload = () => {
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      // flatten transparency
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(0,0,canvas.width,canvas.height);
-      ctx.drawImage(img,0,0,canvas.width,canvas.height);
-      pushUndo();
-    };
-    img.src = drawings[i];
-  }
-
-  canvas.onmousedown = e=>{
-    drawing = true;
-    const {x,y} = getXY(e);
+  canvas.onmousedown=e=>{
+    drawing=true;
+    const {x,y}=getXY(e);
     if(tool==='bucket'){
       const imgd = ctx.getImageData(0,0,canvas.width,canvas.height);
-      scanlineFill(imgd, x, y, color);
+      const rgba = hexToRgba(color);
+      floodfill(imgd.data, x, y, rgba, 128, imgd.width, imgd.height);
       ctx.putImageData(imgd,0,0);
       pushUndo();
       drawing=false;
@@ -101,23 +97,40 @@
       ctx.moveTo(x,y);
     }
   };
-  canvas.onmousemove = draw;
-  canvas.onmouseup = () => { if(drawing && tool!=='bucket') { draw(undefined,true); pushUndo(); } drawing=false; };
+  canvas.onmousemove=draw;
+  canvas.onmouseup=()=>{ if(drawing && tool!=='bucket'){ draw(null, true); pushUndo(); } drawing=false; };
 
   function draw(e,end=false){
     if(!drawing) return;
     const {x,y}=getXY(e);
-    ctx.strokeStyle = tool==='eraser' ? '#fff' : color;
-    ctx.lineWidth = tool==='brush' ? 5 : (tool==='crayon'?15:20);
+    ctx.strokeStyle = tool==='eraser'?'white':color;
+    ctx.lineWidth = tool==='brush'?5:(tool==='crayon'?15:20);
     ctx.globalAlpha = tool==='crayon'?0.3:1;
     ctx.lineCap = tool==='brush'?'round':'square';
-    ctx.lineTo(x,y); ctx.stroke();
+    ctx.lineTo(x,y);
+    ctx.stroke();
     if(end) ctx.globalAlpha=1;
   }
 
   function getXY(e){
     const r=canvas.getBoundingClientRect();
-    return {x:e.clientX-r.left, y:e.clientY-r.top};
+    return { x: e.clientX-r.left, y: e.clientY-r.top };
+  }
+
+  function updateActive(){
+    document.querySelectorAll('.tool').forEach(d=>d.classList.toggle('active', d.dataset.tool===tool));
+    document.querySelectorAll('.color').forEach(d=>d.classList.toggle('active', d.style.backgroundColor===color));
+  }
+
+  function loadPage(i, clearHist){
+    if(clearHist){ undoStack.length=redoStack.length=0; }
+    img.onload=()=>{
+      ctx.fillStyle='white';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      pushUndo();
+    };
+    img.src=drawings[i];
   }
 
   function pushUndo(){
@@ -126,74 +139,66 @@
     redoStack.length=0;
   }
   function undo(){
-    if(undoStack.length<2) return;
+    if(undoStack.length<2)return;
     redoStack.push(undoStack.pop());
-    loadImage(undoStack[undoStack.length-1]);
+    restore(undoStack[undoStack.length-1]);
   }
   function redo(){
-    if(!redoStack.length) return;
+    if(!redoStack.length)return;
     const d=redoStack.pop();
     undoStack.push(d);
-    loadImage(d);
+    restore(d);
   }
-  function loadImage(src){
+  function restore(src){
     const i=new Image();
     i.onload=()=>ctx.drawImage(i,0,0);
-    i.src = src;
+    i.src=src;
   }
 
-  // Scanline flood fill based on Lode Vandevenne’s method 1
-  function scanlineFill(imgd, sx, sy, fillColor){
-    const {data,width,height} = imgd;
-    const target = getPixel(data, width, sx, sy);
-    const fill = colorToRGBA(fillColor);
-    if(equal(target,fill)) return;
-    const stack = [{x:sx, y:sy}];
+  // Tolerance-based flood‑fill from binarymax/floodfill.js 1
+  function floodfill(data, x, y, fill, tol, w, h){
+    const stack = [{x,y}];
+    const idx = (y*w + x)*4;
+    const bc = data.slice(idx, idx+4);
+    function match(px){
+      return Math.abs(px[0]-bc[0])<=tol &&
+             Math.abs(px[1]-bc[1])<=tol &&
+             Math.abs(px[2]-bc[2])<=tol &&
+             Math.abs(px[3]-bc[3])<=tol;
+    }
     while(stack.length){
       const {x,y}=stack.pop();
-      let x1 = x;
-      while(x1>=0 && equal(getPixel(data,width,x1,y),target)){
-        x1--;
-      }
-      x1++;
-      let reachLeft=false, reachRight=false;
-      for(let i = x1; i<width && equal(getPixel(data,width,i,y),target); i++){
-        setPixel(data,width,i,y,fill);
-        if(!reachLeft && y>0 && equal(getPixel(data,width,i,y-1),target)){
-          stack.push({x:i, y:y-1}); reachLeft=true;
-        } else if(reachLeft && y>0 && !equal(getPixel(data,width,i,y-1),target)){
-          reachLeft=false;
+      let nx=x;
+      while(nx>=0 && match(data.slice((y*w+nx)*4,(y*w+nx)*4+4))) nx--;
+      nx++;
+      let spanL=false, spanR=false;
+      for(let i=nx;i<w && match(data.slice((y*w+i)*4,(y*w+i)*4+4));i++){
+        const pi=(y*w+i)*4;
+        data[pi]=fill.r;data[pi+1]=fill.g;data[pi+2]=fill.b;data[pi+3]=fill.a;
+        if(y>0){
+          const upIdx=((y-1)*w+i)*4;
+          if(match(data.slice(upIdx,upIdx+4))){
+            if(!spanL){ stack.push({x:i,y:y-1}); spanL=true; }
+          } else spanL=false;
         }
-        if(!reachRight && y<height-1 && equal(getPixel(data,width,i,y+1),target)){
-          stack.push({x:i, y:y+1}); reachRight=true;
-        } else if(reachRight && y<height-1 && !equal(getPixel(data,width,i,y+1),target)){
-          reachRight=false;
+        if(y<h-1){
+          const dnIdx=((y+1)*w+i)*4;
+          if(match(data.slice(dnIdx,dnIdx+4))){
+            if(!spanR){ stack.push({x:i,y:y+1}); spanR=true;}
+          } else spanR=false;
         }
       }
     }
   }
 
-  function getPixel(d,w,x,y){
-    const p = 4*(y*w+x);
-    return [d[p],d[p+1],d[p+2],d[p+3]];
-  }
-  function setPixel(d,w,x,y,col){
-    const p = 4*(y*w+x);
-    [d[p],d[p+1],d[p+2],d[p+3]] = col;
-  }
-  function equal(a,b){
-    return a[0]===b[0]&&a[1]===b[1]&&a[2]===b[2]&&a[3]===b[3];
-  }
-  function colorToRGBA(c){
-    const tmp = document.createElement('div');
-    tmp.style.color = c;
+  function hexToRgba(hex){
+    const tmp=document.createElement('div');
+    tmp.style.color=hex;
     document.body.appendChild(tmp);
-    const [r,g,b] = getComputedStyle(tmp).color.match(/\d+/g).map(Number);
+    const [r,g,b]=getComputedStyle(tmp).color.match(/\d+/g);
     document.body.removeChild(tmp);
-    return [r,g,b,255];
+    return {r:+r,g:+g,b:+b,a:255};
   }
-
-  loadPage(0,false);
   </script>
 </body>
 </html>
