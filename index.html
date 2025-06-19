@@ -1,28 +1,32 @@
-<!-- index.html -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>RGB Color Guessing Game</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Ultimate Coloring Game</title>
+  <style>
+    body { text-align:center; font-family:sans-serif; margin:0; padding:0; }
+    #palette, #controls { margin:10px; }
+    .color-btn { width:30px;height:30px;display:inline-block;margin:2px;cursor:pointer;border:1px solid #333; }
+    canvas { border:1px solid #333; touch-action:none; }
+  </style>
 </head>
 <body>
-  <h1>The Great <span id="color-display">RGB</span> Guessing Game</h1>
-  <div id="stripe">
-    <button id="reset">New Colors</button>
-    <span id="message"></span>
-    <button class="mode">Easy</button>
-    <button class="mode selected">Hard</button>
+  <h1>Ultimate Coloring Game</h1>
+  <div id="palette"></div>
+  <div id="controls">
+    <select id="tool">
+      <option value="fill">Fill</option>
+      <option value="brush">Brush</option>
+    </select>
+    <button id="undo">Undo</button>
+    <button id="redo">Redo</button>
+    <button id="save">Save PNG</button>
   </div>
-  <div id="container">
-    <div class="square"></div>
-    <div class="square"></div>
-    <div class="square"></div>
-    <div class="square"></div>
-    <div class="square"></div>
-    <div class="square"></div>
-  </div>
-  <script src="script.js"></script>
+  <canvas id="canvas" width="600" height="600"></canvas>
+
+  <script src="floodfill.min.js"></script>
+  <script src="easy-brush.min.js"></script>
+  <script src="worker-fill.min.js"></script>
+  <script src="game.min.js"></script>
 </body>
 </html>
-
