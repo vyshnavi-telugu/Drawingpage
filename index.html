@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Coloring Book</title>
   <style>
-    body { display: flex; margin: 0; font-family: sans-serif; }
-    #sidebar { width: 200px; padding: 10px; background: #f0f0f0; }
-    #canvas-wrap { flex: 1; position: relative; }
-    canvas { border: 1px solid #ccc; }
-    .btn, .tool, .color { margin: 5px; cursor: pointer; padding: 5px; }
-    .active { border: 2px solid red; }
-    .color { width: 24px; height: 24px; display: inline-block; }
+    body { display:flex; margin:0; font-family:sans-serif; }
+    #sidebar { width:200px; padding:10px; background:#f0f0f0; }
+    #canvas-wrap { flex:1; position:relative; }
+    canvas { border:1px solid #ccc; }
+    .btn, .tool, .color { margin:5px; cursor:pointer; padding:5px; }
+    .active { border:2px solid red; }
+    .color { width:24px; height:24px; display:inline-block; }
   </style>
 </head>
 <body>
@@ -25,194 +25,175 @@
     <h4>Colors</h4><div id="colors"></div>
     <button id="undo" class="btn">Undo</button>
     <button id="redo" class="btn">Redo</button>
-    <button id="save" class="btn">Save Image</button>
+    <button id="save" class="btn">Save</button>
   </div>
   <div id="canvas-wrap">
     <canvas id="drawCanvas" width="600" height="600"></canvas>
   </div>
+
   <script>
-  const drawings = [
-    /* set your real URLs */
-    'https://postimage.me/images/2025/06/18/1000072872.jpg',
-    'https://postimage.me/images/2025/06/18/1000072873.jpg',
-    'https://postimage.me/images/2025/06/18/1000072874.jpg',
-    'https://postimage.me/images/2025/06/18/1000072875.jpg',
-    'https://postimage.me/images/2025/06/18/1000072876.jpg',
-    'https://i.postimg.cc/XYZ/portrait-lineart.png',
-    'https://i.postimg.cc/XYZ/princess-full.png'
-  ];
+  const drawings = [/* your image URLs here, must allow CORS */];
 
   const canvas = document.getElementById('drawCanvas');
   const ctx = canvas.getContext('2d');
-  let currentTool = 'brush', drawColor = 'black', drawing = false;
+  let tool = 'brush', color = 'black', drawing = false;
   const img = new Image();
   const undoStack = [], redoStack = [];
 
-  const toolsEl = document.getElementById('tools');
-  const colorsEl = document.getElementById('colors');
-  const pagesEl = document.getElementById('pages');
+  // Enable CORS for images
+  img.crossOrigin = 'anonymous';
 
-  // Pages
-  drawings.forEach((src, idx) => {
-    const btn = document.createElement('button');
-    btn.textContent = 'Page ' + (idx + 1);
-    btn.onclick = () => loadPage(idx, true);
-    pagesEl.appendChild(btn);
+  // Populate UI
+  ['brush','crayon','bucket','eraser'].forEach(t => {
+    const d = document.querySelector(`.tool[data-tool="${t}"]`);
+    d.onclick = () => { tool = t; updateActive(); };
   });
-
-  // Colors
   ['black','red','green','blue','orange'].forEach(c => {
     const d = document.createElement('div');
-    d.className = 'color'; d.style.background = c;
-    d.dataset.color = c;
-    colorsEl.appendChild(d);
+    d.className='color'; d.style.background=c; d.onclick=()=>{color=c;updateActive();};
+    document.getElementById('colors').appendChild(d);
   });
-
-  toolsEl.addEventListener('click', e => {
-    if (e.target.dataset.tool) {
-      currentTool = e.target.dataset.tool;
-      [...toolsEl.children].forEach(el => el.classList.toggle('active', el === e.target));
-    }
-  });
-
-  colorsEl.addEventListener('click', e => {
-    if (e.target.dataset.color) {
-      drawColor = e.target.dataset.color;
-      [...colorsEl.children].forEach(el => el.classList.toggle('active', el === e.target));
-    }
-  });
-
   document.getElementById('undo').onclick = undo;
   document.getElementById('redo').onclick = redo;
-  document.getElementById('save').onclick = saveImage;
-
-  loadPage(0, false);
-
-  // Drawing events
-  canvas.onmousedown = e => {
-    drawing = true;
-    const p = getXY(e);
-    if (currentTool === 'bucket') {
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      floodFill(imageData, drawColor, p.x, p.y);
-      ctx.putImageData(imageData, 0, 0);
-      pushUndo();
-    } else {
-      ctx.beginPath();
-      ctx.moveTo(p.x, p.y);
-    }
-  };
-  canvas.onmousemove = draw;
-  canvas.onmouseup = () => {
-    if (drawing && currentTool !== 'bucket') {
-      draw(undefined, true);
-      pushUndo();
-    }
-    drawing = false;
+  document.getElementById('save').onclick = () => {
+    const a = document.createElement('a');
+    a.download = 'drawing.png';
+    a.href = canvas.toDataURL();
+    a.click();
   };
 
-  function loadPage(i, clearHist) {
-    if (clearHist) { undoStack.length = redoStack.length = 0; }
-    img.src = drawings[i];
+  drawings.forEach((src,i)=>{
+    const btn=document.createElement('button');
+    btn.textContent=`Page ${i+1}`;
+    btn.onclick = ()=>loadPage(i,true);
+    document.getElementById('pages').appendChild(btn);
+  });
+
+  function updateActive(){
+    document.querySelectorAll('.tool').forEach(d=>d.classList.toggle('active', d.dataset.tool===tool));
+    document.querySelectorAll('.color').forEach(d=>d.classList.toggle('active', d.style.backgroundColor===color));
+  }
+
+  function loadPage(i,clear=true){
+    if(clear){undoStack.length=redoStack.length=0;}
     img.onload = () => {
       ctx.clearRect(0,0,canvas.width,canvas.height);
+      // flatten transparency
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
       ctx.drawImage(img,0,0,canvas.width,canvas.height);
       pushUndo();
     };
+    img.src = drawings[i];
   }
 
-  function draw(e, finish = false) {
-    if (!drawing) return;
+  canvas.onmousedown = e=>{
+    drawing = true;
     const {x,y} = getXY(e);
-    if (currentTool === 'eraser') {
-      ctx.strokeStyle = 'white'; ctx.lineWidth = 20;
+    if(tool==='bucket'){
+      const imgd = ctx.getImageData(0,0,canvas.width,canvas.height);
+      scanlineFill(imgd, x, y, color);
+      ctx.putImageData(imgd,0,0);
+      pushUndo();
+      drawing=false;
     } else {
-      ctx.strokeStyle = drawColor;
-      ctx.lineWidth = currentTool === 'brush' ? 5 : 15;
-      ctx.globalAlpha = currentTool === 'crayon' ? 0.3 : 1;
+      ctx.beginPath();
+      ctx.moveTo(x,y);
     }
-    ctx.lineCap = currentTool === 'brush' ? 'round' : 'square';
-    ctx.lineTo(x,y);
-    ctx.stroke();
-    if (finish) ctx.globalAlpha = 1;
+  };
+  canvas.onmousemove = draw;
+  canvas.onmouseup = () => { if(drawing && tool!=='bucket') { draw(undefined,true); pushUndo(); } drawing=false; };
+
+  function draw(e,end=false){
+    if(!drawing) return;
+    const {x,y}=getXY(e);
+    ctx.strokeStyle = tool==='eraser' ? '#fff' : color;
+    ctx.lineWidth = tool==='brush' ? 5 : (tool==='crayon'?15:20);
+    ctx.globalAlpha = tool==='crayon'?0.3:1;
+    ctx.lineCap = tool==='brush'?'round':'square';
+    ctx.lineTo(x,y); ctx.stroke();
+    if(end) ctx.globalAlpha=1;
   }
 
-  function getXY(e) {
-    const r = canvas.getBoundingClientRect();
-    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  function getXY(e){
+    const r=canvas.getBoundingClientRect();
+    return {x:e.clientX-r.left, y:e.clientY-r.top};
   }
 
-  // Efficient flood fill (scanline algorithm) 1
-  function floodFill(imageData, newColor, startX, startY) {
-    const data = imageData.data, w = imageData.width, h = imageData.height;
-    const idx = (startY*w + startX)*4;
-    const base = data.slice(idx,idx+4);
-    const nc = colorToRGBA(newColor);
-    if (base.every((v,i)=>v===nc[i])) return;
-    const stack = [{x:startX, y:startY}];
-    while (stack.length) {
-      const {x,y} = stack.pop();
-      let y1 = y;
-      while (y1>=0 && match(y1,x,base)) y1--;
-      y1++;
-      let spanLeft=false, spanRight=false;
-      while (y1<h && match(y1,x,base)) {
-        const pos = (y1*w + x)*4;
-        for (let i=0;i<4;i++) data[pos+i] = nc[i];
-        if (x>0) {
-          if (match(y1,x-1,base) && !spanLeft) { stack.push({x:x-1,y:y1}); spanLeft=true; }
-          else if (!match(y1,x-1,base)) spanLeft=false;
+  function pushUndo(){
+    undoStack.push(canvas.toDataURL());
+    if(undoStack.length>50) undoStack.shift();
+    redoStack.length=0;
+  }
+  function undo(){
+    if(undoStack.length<2) return;
+    redoStack.push(undoStack.pop());
+    loadImage(undoStack[undoStack.length-1]);
+  }
+  function redo(){
+    if(!redoStack.length) return;
+    const d=redoStack.pop();
+    undoStack.push(d);
+    loadImage(d);
+  }
+  function loadImage(src){
+    const i=new Image();
+    i.onload=()=>ctx.drawImage(i,0,0);
+    i.src = src;
+  }
+
+  // Scanline flood fill based on Lode Vandevenne’s method 1
+  function scanlineFill(imgd, sx, sy, fillColor){
+    const {data,width,height} = imgd;
+    const target = getPixel(data, width, sx, sy);
+    const fill = colorToRGBA(fillColor);
+    if(equal(target,fill)) return;
+    const stack = [{x:sx, y:sy}];
+    while(stack.length){
+      const {x,y}=stack.pop();
+      let x1 = x;
+      while(x1>=0 && equal(getPixel(data,width,x1,y),target)){
+        x1--;
+      }
+      x1++;
+      let reachLeft=false, reachRight=false;
+      for(let i = x1; i<width && equal(getPixel(data,width,i,y),target); i++){
+        setPixel(data,width,i,y,fill);
+        if(!reachLeft && y>0 && equal(getPixel(data,width,i,y-1),target)){
+          stack.push({x:i, y:y-1}); reachLeft=true;
+        } else if(reachLeft && y>0 && !equal(getPixel(data,width,i,y-1),target)){
+          reachLeft=false;
         }
-        if (x<w-1) {
-          if (match(y1,x+1,base) && !spanRight) { stack.push({x:x+1,y:y1}); spanRight=true; }
-          else if (!match(y1,x+1,base)) spanRight=false;
+        if(!reachRight && y<height-1 && equal(getPixel(data,width,i,y+1),target)){
+          stack.push({x:i, y:y+1}); reachRight=true;
+        } else if(reachRight && y<height-1 && !equal(getPixel(data,width,i,y+1),target)){
+          reachRight=false;
         }
-        y1++;
       }
     }
   }
-  function match(y,x,base) {
-    const pos=(y*imageData.width + x)*4;
-    return data[pos]===base[0] && data[pos+1]===base[1] &&
-           data[pos+2]===base[2] && data[pos+3]===base[3];
+
+  function getPixel(d,w,x,y){
+    const p = 4*(y*w+x);
+    return [d[p],d[p+1],d[p+2],d[p+3]];
+  }
+  function setPixel(d,w,x,y,col){
+    const p = 4*(y*w+x);
+    [d[p],d[p+1],d[p+2],d[p+3]] = col;
+  }
+  function equal(a,b){
+    return a[0]===b[0]&&a[1]===b[1]&&a[2]===b[2]&&a[3]===b[3];
   }
   function colorToRGBA(c){
     const tmp = document.createElement('div');
     tmp.style.color = c;
     document.body.appendChild(tmp);
-    const [r,g,b] = getComputedStyle(tmp).color.match(/\d+/g);
+    const [r,g,b] = getComputedStyle(tmp).color.match(/\d+/g).map(Number);
     document.body.removeChild(tmp);
-    return [+r,+g,+b,255];
+    return [r,g,b,255];
   }
 
-  function pushUndo(){
-    undoStack.push(canvas.toDataURL());
-    if (undoStack.length>50) undoStack.shift();
-    redoStack.length = 0;
-  }
-  function restore(d){
-    const i = new Image(); i.src = d;
-    i.onload = ()=> ctx.drawImage(i,0,0);
-  }
-  function undo(){
-    if (undoStack.length>1) {
-      redoStack.push(undoStack.pop());
-      restore(undoStack[undoStack.length-1]);
-    }
-  }
-  function redo(){
-    if (redoStack.length) {
-      const d = redoStack.pop();
-      undoStack.push(d);
-      restore(d);
-    }
-  }
-  function saveImage(){
-    const a = document.createElement('a');
-    a.download = 'coloring.png';
-    a.href = canvas.toDataURL('image/png');
-    a.click();
-  }
+  loadPage(0,false);
   </script>
 </body>
 </html>
