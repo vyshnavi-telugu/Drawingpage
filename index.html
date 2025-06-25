@@ -21,7 +21,7 @@
 
     #home {
       background-color: #f5f5f5;
-      background: url('https://postimage.me/images/2025/06/25/1000074209.jpg') no-repeat center center;
+      background: url('https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Rangoli_Design.jpg/800px-Rangoli_Design.jpg') no-repeat center center;
       background-size: cover;
     }
 
@@ -48,11 +48,15 @@
       display: flex; justify-content: space-around;
       align-items: center; width: 100%;
       background: #eee; padding: 8px;
+      box-sizing: border-box;
     }
     #bottom-bar {
+      position: absolute;
+      bottom: 0; left: 0;
+      width: 100%; background: #eee;
+      padding: 10px; box-sizing: border-box;
       display: flex; justify-content: center;
-      flex-wrap: wrap; background: #eee;
-      padding: 10px;
+      flex-wrap: wrap; z-index: 10;
     }
     .tool, .color {
       margin: 4px; padding: 6px;
@@ -66,11 +70,13 @@
       touch-action: none;
       user-select: none;
       width: 100vw;
-      height: calc(100vh - 100px); /* leave space for top/bottom bars */
+      height: calc(100vh - 100px);
+      margin-bottom: 60px;
+      display: block;
     }
     .active { border: 2px solid red !important; }
 
-    /* Button background colors, text always black */
+    /* Button styles */
     #undoBtn, #redoBtn { background: skyblue; color: black; }
     #saveBtn { background: green; color: black; }
     #deleteBtn { background: red; color: black; }
@@ -102,15 +108,12 @@
     <button id="downloadBtn">Download</button>
   </div>
   <canvas id="drawCanvas"></canvas>
-  <div id="bottom-bar">
-    <div class="tool" data-tool="bucket">🪣</div>
-    <div class="tool" data-tool="eraser">🧽</div>
-  </div>
+  <div id="bottom-bar"></div>
 </div>
 
 <script>
 const drawings = [
-   'https://i.postimg.cc/TPZTn08W/0f00c43f3775ba5fcce443f4885aa56e.jpg',
+  'https://i.postimg.cc/TPZTn08W/0f00c43f3775ba5fcce443f4885aa56e.jpg',
   'https://i.postimg.cc/Bv8q8yz0/36-girl-with-butterfly-wings-to-color.jpg',
   'https://i.postimg.cc/pLsT5KXD/6331b296558cf1f8f7fd87cc9154f432.jpg',
     'https://i.postimg.cc/2yYmK5Sk/7113dc553901fe5719b2c9e221449e28.jpg',
@@ -118,7 +121,7 @@ const drawings = [
     'https://i.postimg.cc/jS1TrcSk/Barbie-10.jpg',
     'https://i.postimg.cc/FsDmTN5v/Barbie-24.jpg',
     'https://i.postimg.cc/j2YdYXZr/Barbie-27.jpg',
-  'https://i.postimg.cc/cJ6JR6rP/bc2884b1a90b6d9db42580113054c40b.jpg',  
+  'https://i.postimg.cc/cJ6JR6rP/bc2884b1a90b6d9db42580113054c40b.jpg'
 ];
 const savedImages = [];
 const canvas = document.getElementById('drawCanvas');
@@ -126,11 +129,10 @@ const ctx = canvas.getContext('2d');
 const img = new Image();
 img.crossOrigin = 'anonymous';
 
-// mobile full screen adjustments
 function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight - document.getElementById('top-bar').offsetHeight - document.getElementById('bottom-bar').offsetHeight;
-  redrawCurrent();
+  redraw();
 }
 window.addEventListener('resize', resizeCanvas);
 
@@ -138,19 +140,13 @@ let tool = 'bucket', color = 'black';
 let scale = 1, pan = { x:0, y:0 };
 let lastTouches = [];
 const undoStack = [], redoStack = [];
-let currentImageData = null;
+let baseImageLoaded = false;
+let imageInitial = null;
 
-// initialize buttons
 document.getElementById('undoBtn').onclick = undo;
 document.getElementById('redoBtn').onclick = redo;
 document.getElementById('saveBtn').onclick = save;
-document.getElementById('deleteBtn').onclick = () => {
-  if (currentImageData) {
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    redrawCurrent();
-    pushUndo();
-  }
-};
+document.getElementById('deleteBtn').onclick = () => { if(baseImageLoaded) { resetDrawing(); pushUndo(); } };
 document.getElementById('downloadBtn').onclick = () => {
   const a = document.createElement('a');
   a.href = canvas.toDataURL('image/png');
@@ -158,176 +154,153 @@ document.getElementById('downloadBtn').onclick = () => {
   a.click();
 };
 
-function showHome() { hideAll(); document.getElementById('home').style.display='flex'; }
+function showHome() { hideAll(); document.getElementById('home').style.display = 'flex'; }
 function showLibrary() {
   hideAll();
   const lib = document.getElementById('library');
   lib.style.display='flex'; lib.style.flexWrap='wrap';
-  lib.innerHTML = '<h2>Saved Images</h2>';
-  savedImages.forEach(src => {
-    const im = document.createElement('img');
-    im.src = src;
-    lib.appendChild(im);
-  });
-  const b = document.createElement('button');
-  b.textContent = '⬅ Back';
-  b.onclick = showHome;
+  lib.innerHTML='<h2>Saved Images</h2>';
+  savedImages.forEach(src => { const i = document.createElement('img'); i.src=src; lib.appendChild(i); });
+  const b = document.createElement('button'); b.textContent='⬅ Back'; b.onclick=showHome;
   lib.appendChild(b);
 }
 function showPageSelect() {
   hideAll();
   const ps = document.getElementById('pageSelect');
   ps.style.display='flex'; ps.style.flexWrap='wrap';
-  ps.innerHTML = '<h2>Select a Drawing</h2>';
+  ps.innerHTML='<h2>Select a Drawing</h2>';
   drawings.forEach((src,i) => {
-    const im = document.createElement('img');
-    im.src = src;
-    im.onclick = () => loadPage(i);
-    ps.appendChild(im);
+    const iElem = document.createElement('img');
+    iElem.src=src;
+    iElem.onclick = () => loadPage(i);
+    ps.appendChild(iElem);
   });
-  const b = document.createElement('button');
-  b.textContent = '⬅ Back';
-  b.onclick = showHome;
+  const b = document.createElement('button'); b.textContent='⬅ Back'; b.onclick=showHome;
   ps.appendChild(b);
 }
-function loadPage(idx) {
-  hideAll();
-  document.getElementById('drawing').style.display = 'flex';
-  img.onload = () => {
-    resizeCanvas();
-    updateTransform();
-    pushUndo();
-  };
-  img.src = drawings[idx] + '?v=' + Date.now();
-}
 function hideAll() {
-  ['home','library','pageSelect','drawing'].forEach(id => document.getElementById(id).style.display = 'none');
+  ['home','library','pageSelect','drawing'].forEach(id => document.getElementById(id).style.display='none');
+}
+function loadPage(i) {
+  hideAll(); document.getElementById('drawing').style.display='flex';
+  img.onload = () => { baseImageLoaded=true; pan={x:0,y:0}; scale=1; resizeCanvas(); resetDrawing(); pushUndo(); };
+  img.src = drawings[i]+'?v='+Date.now();
+}
+function resetDrawing() {
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  redraw();
+}
+function redraw() {
+  if(!baseImageLoaded) return;
+  ctx.setTransform(scale,0,0,scale,pan.x,pan.y);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.drawImage(img, 0, 0, canvas.width/scale, canvas.height/scale);
 }
 
-document.querySelectorAll('.tool').forEach(el => {
-  el.onclick = () => { tool = el.dataset.tool; updateUI(); };
-});
-const palette = ['black','gray','red','orange','yellow','green','blue','purple','pink','brown','white','cyan','magenta','lime','gold','navy',
-  '#ffe0bd','#ffcd94','#eac086','#ffad60','#ffe4c4'];
 const bar = document.getElementById('bottom-bar');
+const palette = ['black','gray','red','orange','yellow','green','blue','purple','pink','brown','white','cyan','magenta','lime','gold','navy',
+                  '#ffe0bd','#ffcd94','#eac086','#ffad60','#ffe4c4'];
 palette.forEach(c => {
   const d = document.createElement('div');
   d.className = 'color';
   d.style.background = c;
-  d.onclick = () => { color = c; updateUI(); };
+  d.onclick = () => { color=c; updateUI(); };
   bar.appendChild(d);
 });
 function updateUI() {
-  document.querySelectorAll('.tool').forEach(el => el.classList.toggle('active', el.dataset.tool === tool));
-  document.querySelectorAll('.color').forEach(el => el.classList.toggle('active', el.style.background === color));
+  document.querySelectorAll('.color').forEach(el => el.classList.toggle('active', el.style.background===color));
 }
 
-// Flood fill enhanced
+// Floodfill
 function hexToRGBA(hex) {
-  const tm = document.createElement('div'); tm.style.color = hex;
-  document.body.appendChild(tm);
-  const [r,g,b] = getComputedStyle(tm).color.match(/\d+/g).map(Number);
-  document.body.removeChild(tm);
-  return { r, g, b, a:255 };
+  const t = document.createElement('div');
+  t.style.color = hex;
+  document.body.appendChild(t);
+  const [r,g,b] = getComputedStyle(t).color.match(/\d+/g).map(Number);
+  document.body.removeChild(t);
+  return {r,g,b,a:255};
 }
 function floodfill(data, sx, sy, fill, tol, w, h) {
   const base = data.slice((sy*w+sx)*4, (sy*w+sx)*4+4);
   const diff = (p,q) => Math.abs(p[0]-q[0])+Math.abs(p[1]-q[1])+Math.abs(p[2]-q[2])+Math.abs(p[3]-q[3]);
-  const match = px => diff(px, base) < tol;
-  const stk = [{x:sx,y:sy}];
-  const vis = new Uint8Array(w*h);
-  while (stk.length) {
+  const match = px => diff(px,base)<tol;
+  const stk=[{x:sx,y:sy}], vis=new Uint8Array(w*h);
+  while(stk.length) {
     const {x,y} = stk.pop();
-    if (x<0||x>=w||y<0||y>=h) continue;
-    const idx = y*w + x;
-    if (vis[idx]) continue;
-    vis[idx] = 1;
+    if(x<0||y<0||x>=w||y>=h) continue;
+    const idx = y*w+x;
+    if(vis[idx]) continue;
+    vis[idx]=1;
     const i = idx*4;
-    const cx = data.slice(i,i+4);
-    if (!match(cx)) continue;
-    data[i]=fill.r;data[i+1]=fill.g;data[i+2]=fill.b;data[i+3]=fill.a;
+    const px = data.slice(i,i+4);
+    if(!match(px)) continue;
+    data[i]=fill.r; data[i+1]=fill.g; data[i+2]=fill.b; data[i+3]=fill.a;
     stk.push({x:x+1,y},{x:x-1,y},{x,y:y+1},{x,y:y-1});
   }
 }
 
-// Drawing input
-function redrawCurrent() {
-  if (!img.src) return;
-  ctx.save();
-  ctx.setTransform(1,0,0,1,0,0);
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.restore();
-  ctx.drawImage(img, pan.x, pan.y, img.width*scale, img.height*scale);
-}
-function updateTransform() {
-  ctx.setTransform(scale,0,0,scale, pan.x, pan.y);
-  redrawCurrent();
-}
-
+// Touch handlers
+canvas.addEventListener('touchstart', e => { lastTouches = Array.from(e.touches); });
 canvas.addEventListener('touchmove', e => {
   e.preventDefault();
-  const touches = e.touches;
-  if (touches.length === 2) {
-    const [a,b] = touches;
-    const d = Math.hypot(b.pageX-a.pageX, b.pageY-a.pageY);
-    if (lastTouches.length === 2) {
-      const ld = Math.hypot(lastTouches[1].pageX-lastTouches[0].pageX, lastTouches[1].pageY-lastTouches[0].pageY);
-      const delta = d/ld;
-      scale *= delta;
-      pan.x = (pan.x + a.pageX)*delta - a.pageX;
-      pan.y = (pan.y + a.pageY)*delta - a.pageY;
+  const t = e.touches;
+  if(t.length === 2 && baseImageLoaded) {
+    const a = t[0], b = t[1];
+    const midX = (a.pageX + b.pageX)/2, midY = (a.pageY + b.pageY)/2;
+    if(lastTouches.length === 2) {
+      const dCur = Math.hypot(b.pageX-a.pageX, b.pageY-a.pageY);
+      const dLast = Math.hypot(lastTouches[1].pageX-lastTouches[0].pageX, lastTouches[1].pageY-lastTouches[0].pageY);
+      const deltaS = dCur/dLast;
+      scale *= deltaS;
+      const panSpeed = 0.3;
+      pan.x += (midX - (lastTouches[0].pageX+lastTouches[1].pageX)/2)*panSpeed;
+      pan.y += (midY - (lastTouches[0].pageY+lastTouches[1].pageY)/2)*panSpeed;
     }
-    lastTouches = [a,b];
-    updateTransform();
-  } else if (touches.length === 1 && lastTouches.length === 1) {
-    const deltaX = touches[0].pageX - lastTouches[0].pageX;
-    const deltaY = touches[0].pageY - lastTouches[0].pageY;
-    pan.x += deltaX;
-    pan.y += deltaY;
-    lastTouches = [touches[0]];
-    updateTransform();
+    lastTouches = Array.from(e.touches);
+    redraw();
+  } else if(t.length === 1 && lastTouches.length === 1 && baseImageLoaded) {
+    const dx = (t[0].pageX - lastTouches[0].pageX)*0.3;
+    const dy = (t[0].pageY - lastTouches[0].pageY)*0.3;
+    pan.x += dx; pan.y += dy;
+    lastTouches = Array.from(e.touches);
+    redraw();
   }
-});
-canvas.addEventListener('touchstart', e => {
-  lastTouches = Array.from(e.touches);
-});
-canvas.addEventListener('touchend', () => {
-  lastTouches = [];
-});
-canvas.addEventListener('touchcancel', () => { lastTouches = []; });
+}, { passive: false });
 
 canvas.addEventListener('touchend', e => {
-  if (e.touches.length === 0 && tool === 'bucket') {
+  if(baseImageLoaded && lastTouches.length === 1 && tool==='bucket') {
     const rect = canvas.getBoundingClientRect();
     const x = (lastTouches[0].pageX - rect.left - pan.x)/scale;
     const y = (lastTouches[0].pageY - rect.top - pan.y)/scale;
     const imgd = ctx.getImageData(0,0,canvas.width,canvas.height);
-    floodfill(imgd.data, x|0, y|0, hexToRGBA(color), 60, imgd.width, imgd.height);
+    floodfill(imgd.data, Math.floor(x), Math.floor(y), hexToRGBA(color), 60, imgd.width, imgd.height);
     ctx.putImageData(imgd,0,0);
     pushUndo();
   }
-});
+  lastTouches = [];
+}, { passive: true });
 
 // Undo/Redo/Save
 function pushUndo(){
   undoStack.push(canvas.toDataURL());
-  if (undoStack.length>50) undoStack.shift();
+  if(undoStack.length>50) undoStack.shift();
   redoStack.length = 0;
 }
 function undo(){
-  if (undoStack.length<2) return;
+  if(undoStack.length < 2) return;
   redoStack.push(undoStack.pop());
   restore(undoStack[undoStack.length-1]);
 }
 function redo(){
-  if (!redoStack.length) return;
+  if(!redoStack.length) return;
   const d = redoStack.pop();
   undoStack.push(d);
   restore(d);
 }
 function restore(src){
   const i = new Image();
-  i.onload = () => ctx.drawImage(i, 0, 0);
+  i.onload = () => { resetDrawing(); pushUndo(); };
   i.src = src;
 }
 function save(){
@@ -336,6 +309,7 @@ function save(){
 }
 
 // Init
+resizeCanvas();
 showHome();
 </script>
 
