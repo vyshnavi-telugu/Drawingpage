@@ -1,182 +1,228 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Coloring Book App</title>
-<style>
-  html, body { margin:0; padding:0; width:100%; height:100%; font-family:sans-serif; }
-  body { display:flex; flex-direction:column; }
-  #drawing { flex:1; display:flex; flex-direction:column; }
-  #top-bar, #bottom-bar { display:flex; background:#eee; padding:8px; }
-  #bottom-bar { justify-content:center; flex-wrap:wrap; }
-  canvas { flex:1; touch-action:none; }
-  .color { width:28px; height:28px; margin:4px; border:1px solid #333; cursor:pointer; border-radius:4px; }
-  .active { border:2px solid red; }
-</style>
+  <meta charset="UTF-8" />
+  <title>Coloring Book with Smooth Brush</title>
+  <style>
+    body { display:flex; margin:0; font-family:sans-serif; }
+    #sidebar { width:250px; background:#f0f0f0; padding:10px; }
+    #canvas-wrap { flex:1; }
+    canvas { border:1px solid #ccc; cursor:crosshair; }
+    .tool, .color, .btn { margin:5px; padding:5px; cursor:pointer; display:inline-block; }
+    .active { border:2px solid red !important; }
+    .color { width:24px; height:24px; }
+  </style>
 </head>
 <body>
-
-<!-- Only the drawing interface for conciseness -->
-<div id="drawing">
-  <div id="top-bar">
-    <button id="undoBtn">Undo</button>
-    <button id="redoBtn">Redo</button>
-    <button id="saveBtn">Save</button>
-    <button id="downloadBtn">Download</button>
+  <div id="sidebar">
+    <h4>Pages</h4><div id="pages"></div>
+    <h4>Tools</h4>
+    <div id="tools">
+      <div class="tool" data-tool="brush">Brush</div>
+      <div class="tool" data-tool="crayon">Crayon</div>
+      <div class="tool" data-tool="bucket">Bucket</div>
+      <div class="tool" data-tool="eraser">Eraser</div>
+    </div>
+    <h4>Colors</h4><div id="colors"></div>
+    <div>
+      <button id="undo" class="btn">Undo</button>
+      <button id="redo" class="btn">Redo</button>
+      <button id="save" class="btn">Save</button>
+    </div>
   </div>
-  <canvas id="drawCanvas"></canvas>
-  <div id="bottom-bar"></div>
-</div>
+  <div id="canvas-wrap">
+    <canvas id="drawCanvas" width="600" height="600"></canvas>
+  </div>
 
-<script>
-const drawings = [
-  ''https://i.postimg.cc/TPZTn08W/0f00c43f3775ba5fcce443f4885aa56e.jpg',
-  'https://i.postimg.cc/Bv8q8yz0/36-girl-with-butterfly-wings-to-color.jpg',
-  'https://i.postimg.cc/pLsT5KXD/6331b296558cf1f8f7fd87cc9154f432.jpg',
-    'https://i.postimg.cc/2yYmK5Sk/7113dc553901fe5719b2c9e221449e28.jpg',
-    'https://i.postimg.cc/MKxKs9n7/adorable-fun-kids-coloring-page-delight-freepik-908673-3027.jpg',
-    'https://i.postimg.cc/jS1TrcSk/Barbie-10.jpg',
-    'https://i.postimg.cc/FsDmTN5v/Barbie-24.jpg',
-    'https://i.postimg.cc/j2YdYXZr/Barbie-27.jpg',
-  'https://i.postimg.cc/cJ6JR6rP/bc2884b1a90b6d9db42580113054c40b.jpg','
-];
-const canvas = document.getElementById('drawCanvas'), ctx = canvas.getContext('2d');
-let img, baseLoaded=false, scale=1, pan={x:0,y:0}, lastTouches=[];
-let color='black', undoStack=[], redoStack=[];
-const panSpeed=0.2;
+  <script>
+    const drawings = [
+      'https://i.postimg.cc/5yZbL7kT/1000072872.jpg',
+      'https://i.postimg.cc/5yZbL7kT/1000072872.jpg',
+      'https://i.postimg.cc/5yZbL7kT/1000072872.jpg',
+      'https://i.postimg.cc/Xkn9FLy1/1000072873.jpg',
+      'https://i.postimg.cc/YzWpLf7D/1000072874.jpg',
+    ];
 
-function resizeCanvas(){
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight - document.getElementById('top-bar').offsetHeight - document.getElementById('bottom-bar').offsetHeight;
-  if (baseLoaded) redraw();
-}
-window.addEventListener('resize', resizeCanvas);
+    const canvas = document.getElementById('drawCanvas');
+    const ctx = canvas.getContext('2d');
+    ctx.lineCap = 'round';
 
-function redraw(){
-  ctx.setTransform(scale,0,0,scale,pan.x,pan.y);
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.drawImage(img,0,0);
-}
+    let tool = 'brush', color = 'black';
+    let isDrawing = false;
+    let points = [];
 
-function loadImage(){
-  img = new Image();
-  img.crossOrigin = 'anonymous'; // before src! 5
-  img.onload = ()=>{
-    baseLoaded = true; scale=1; pan={x:0,y:0};
-    resizeCanvas(); redraw(); pushUndo();
-  };
-  img.src = drawings[0] + '?v=' + Date.now(); // cache-buster
-}
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
 
-function pushUndo(){
-  undoStack.push(canvas.toDataURL());
-  if(undoStack.length>50) undoStack.shift();
-  redoStack = [];
-}
+    const undoStack = [], redoStack = [];
+    const toolsEl = document.getElementById('tools');
+    const colorsEl = document.getElementById('colors');
+    const pagesEl = document.getElementById('pages');
 
-function undo(){
-  if(undoStack.length<2) return;
-  redoStack.push(undoStack.pop());
-  restore(undoStack[undoStack.length-1]);
-}
+    drawings.forEach((src, i) => {
+      const btn = document.createElement('button');
+      btn.textContent = 'Page ' + (i + 1);
+      btn.onclick = () => loadPage(i, true);
+      pagesEl.appendChild(btn);
+    });
 
-function redo(){
-  if(!redoStack.length) return;
-  const d = redoStack.pop();
-  undoStack.push(d);
-  restore(d);
-}
+    ['brush','crayon','bucket','eraser'].forEach(t => {
+      const el = document.querySelector(`.tool[data-tool="${t}"]`);
+      el.onclick = () => { tool = t; updateUI(); };
+    });
+    ['black','red','green','blue','orange'].forEach(c => {
+      const div = document.createElement('div');
+      div.className = 'color';
+      div.style.background = c;
+      div.onclick = () => { color = c; updateUI(); };
+      colorsEl.appendChild(div);
+    });
 
-function restore(src){
-  const i = new Image();
-  i.onload = ()=>{ ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(i,0,0); };
-  i.src = src;
-}
+    document.getElementById('undo').onclick = undo;
+    document.getElementById('redo').onclick = redo;
+    document.getElementById('save').onclick = () => {
+      const a = document.createElement('a');
+      a.download = 'drawing.png';
+      a.href = canvas.toDataURL();
+      a.click();
+    };
 
-document.getElementById('undoBtn').onclick = undo;
-document.getElementById('redoBtn').onclick = redo;
-document.getElementById('saveBtn').onclick = ()=>{ pushUndo(); alert('Saved!'); };
-document.getElementById('downloadBtn').onclick = ()=>{ const a=document.createElement('a'); a.href=canvas.toDataURL(); a.download='coloring.png'; a.click(); };
+    updateUI();
+    loadPage(0, false);
 
-const bottom = document.getElementById('bottom-bar');
-['black','red','orange','yellow','green','blue','purple','white'].forEach(c=>{
-  const d = document.createElement('div');
-  d.className='color'; d.style.background=c;
-  d.onclick = ()=>{ color=c; updatePalette(); };
-  bottom.appendChild(d);
-});
+    canvas.onmousedown = e => {
+      const { x, y } = getXY(e);
+      if (tool === 'bucket') {
+        const imgd = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const rgba = hexToRGBA(color);
+        floodfill(imgd.data, x, y, rgba, 128, imgd.width, imgd.height);
+        ctx.putImageData(imgd, 0, 0);
+        pushUndo();
+      } else {
+        isDrawing = true;
+        points = [{ x, y }];
+      }
+    };
 
-function updatePalette(){
-  document.querySelectorAll('.color').forEach(el=>{
-    el.classList.toggle('active', el.style.background===color);
-  });
-}
-updatePalette();
+    canvas.onmousemove = e => {
+      if (!isDrawing) return;
+      const { x, y } = getXY(e);
+      points.push({ x, y });
+      redrawStroke();
+    };
 
-function hexToRGBA(hex){
-  const t=document.createElement('div');
-  t.style.color=hex;
-  document.body.appendChild(t);
-  const [r,g,b]=getComputedStyle(t).color.match(/\d+/g).map(Number);
-  document.body.removeChild(t);
-  return {r,g,b,a:255};
-}
+    canvas.onmouseup = () => {
+      if (isDrawing) {
+        pushUndo();
+        isDrawing = false;
+      }
+    };
 
-function floodfill(data, sx, sy, fill, tol, w, h){
-  const baseIdx = (sy*w+sx)*4;
-  const base = [data[baseIdx],data[baseIdx+1],data[baseIdx+2],255];
-  const match = (i)=>Math.abs(data[i]-base[0])+Math.abs(data[i+1]-base[1])+Math.abs(data[i+2]-base[2])<=tol;
-  const stack=[{x:sx,y:sy}], vis=new Uint8Array(w*h);
-  while(stack.length){
-    const {x,y}=stack.pop();
-    if(x<0||y<0||x>=w||y>=h) continue;
-    const idx=y*w+x; if(vis[idx]) continue;
-    vis[idx]=1;
-    const i4=idx*4;
-    if(!match(i4)) continue;
-    data[i4]=fill.r; data[i4+1]=fill.g; data[i4+2]=fill.b; data[i4+3]=255;
-    stack.push({x:x+1,y},{x:x-1,y},{x,y:y+1},{x,y:y-1});
-  }
-}
+    function redrawStroke() {
+      const temp = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      ctx.putImageData(temp, 0, 0);
+      ctx.beginPath();
+      if (points.length < 3) {
+        ctx.moveTo(points[0].x, points[0].y);
+        return;
+      }
+      ctx.strokeStyle = tool === 'eraser' ? 'white' : color;
+      ctx.lineWidth = tool === 'brush' ? 5 : tool === 'crayon' ? 15 : 20;
+      ctx.globalAlpha = tool === 'crayon' ? 0.3 : 1;
 
-canvas.addEventListener('touchstart', e=>{ lastTouches=Array.from(e.touches); });
-canvas.addEventListener('touchmove', e=>{
-  e.preventDefault();
-  const t=e.touches;
-  if(t.length===2){
-    const [a,b]=t;
-    const midX=(a.pageX+b.pageX)/2, midY=(a.pageY+b.pageY)/2;
-    const dCur=Math.hypot(b.pageX-a.pageX,b.pageY-a.pageY);
-    const dLast=Math.hypot(lastTouches[1].pageX-lastTouches[0].pageX,lastTouches[1].pageY-lastTouches[0].pageY);
-    const factor=dCur/dLast;
-    scale*=factor;
-    pan.x += (midX - (lastTouches[0].pageX+lastTouches[1].pageX)/2)*panSpeed;
-    pan.y += (midY - (lastTouches[0].pageY+lastTouches[1].pageY)/2)*panSpeed;
-    lastTouches = Array.from(t);
-    redraw();
-  } else if(t.length===1 && lastTouches.length===1){
-    pan.x += (t[0].pageX - lastTouches[0].pageX)*panSpeed;
-    pan.y += (t[0].pageY - lastTouches[0].pageY)*panSpeed;
-    lastTouches = Array.from(t);
-    redraw();
-  }
-}, {passive:false});
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length - 2; i++) {
+        const xc = (points[i].x + points[i+1].x)/2;
+        const yc = (points[i].y + points[i+1].y)/2;
+        ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
+      }
+      const last = points[points.length-1];
+      const secondLast = points[points.length-2];
+      ctx.quadraticCurveTo(secondLast.x, secondLast.y, last.x, last.y);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
 
-canvas.addEventListener('touchend', e=>{
-  if(baseLoaded && lastTouches.length===1){
-    const rect=canvas.getBoundingClientRect();
-    const x = Math.floor((lastTouches[0].pageX - rect.left - pan.x)/scale);
-    const y = Math.floor((lastTouches[0].pageY - rect.top - pan.y)/scale);
-    const imgd = ctx.getImageData(0,0,canvas.width,canvas.height);
-    floodfill(imgd.data, x, y, hexToRGBA(color), 60, imgd.width, imgd.height);
-    ctx.putImageData(imgd, 0, 0);
-    pushUndo();
-  }
-  lastTouches = [];
-}, {passive:true});
+    function getXY(e) {
+      const r = canvas.getBoundingClientRect();
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    }
 
-loadImage();
-</script>
+    function updateUI() {
+      document.querySelectorAll('.tool').forEach(el => el.classList.toggle('active', el.dataset.tool === tool));
+      document.querySelectorAll('.color').forEach(el => el.classList.toggle('active', el.style.background === color));
+    }
+
+    function loadPage(idx, clearHistory) {
+      if (clearHistory) undoStack.length = redoStack.length = 0;
+      img.onload = () => {
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        pushUndo();
+      };
+      img.src = drawings[idx];
+    }
+
+    function pushUndo() {
+      undoStack.push(canvas.toDataURL());
+      if (undoStack.length > 50) undoStack.shift();
+      redoStack.length = 0;
+    }
+    function undo() {
+      if (undoStack.length < 2) return;
+      redoStack.push(undoStack.pop());
+      restore(undoStack[undoStack.length - 1]);
+    }
+    function redo() {
+      if (!redoStack.length) return;
+      const data = redoStack.pop();
+      undoStack.push(data);
+      restore(data);
+    }
+    function restore(src) {
+      const image = new Image();
+      image.onload = () => ctx.drawImage(image, 0, 0);
+      image.src = src;
+    }
+
+    function floodfill(data, sx, sy, fill, tol, w, h) {
+      const stack = [{ x: sx, y: sy }];
+      const baseIdx = (sy*w + sx)*4;
+      const base = data.slice(baseIdx, baseIdx+4);
+      const match = px => Math.abs(px[0] - base[0]) <= tol &&
+                          Math.abs(px[1] - base[1]) <= tol &&
+                          Math.abs(px[2] - base[2]) <= tol &&
+                          Math.abs(px[3] - base[3]) <= tol;
+      while (stack.length) {
+        const { x, y } = stack.pop();
+        let nx = x;
+        while (nx >= 0 && match(data.slice((y*w+nx)*4, (y*w+nx)*4+4))) nx--;
+        nx++;
+        let spanL = false, spanR = false;
+        for (let i = nx; i < w && match(data.slice((y*w+i)*4, (y*w+i)*4+4)); i++) {
+          const pi = (y*w + i)*4;
+          data[pi] = fill.r; data[pi+1] = fill.g; data[pi+2] = fill.b; data[pi+3] = fill.a;
+          if (!spanL && y>0) {
+            const upIdx = ((y-1)*w + i)*4;
+            if (match(data.slice(upIdx, upIdx+4))) { stack.push({ x:i, y:y-1 }); spanL = true; }
+          }
+          if (!spanR && y<h-1) {
+            const dnIdx = ((y+1)*w + i)*4;
+            if (match(data.slice(dnIdx, dnIdx+4))) { stack.push({ x:i, y:y+1 }); spanR = true; }
+          }
+        }
+      }
+    }
+
+    function hexToRGBA(hex) {
+      const tmp = document.createElement('div');
+      tmp.style.color = hex;
+      document.body.appendChild(tmp);
+      const [r, g, b] = getComputedStyle(tmp).color.match(/\d+/g).map(Number);
+      document.body.removeChild(tmp);
+      return { r, g, b, a: 255 };
+    }
+  </script>
 </body>
 </html>
