@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>Mobile Coloring Book with Zoom Limits</title>
+<title>Zoomable Coloring Book</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   html,body{height:100%;overflow:hidden;font-family:sans-serif;}
@@ -42,11 +42,7 @@
   </div>
 
 <script>
-// Configuration
-const MIN_SCALE = 0.5;
-const MAX_SCALE = 3;
-
-// State
+const MIN_SCALE = 0.5, MAX_SCALE = 3;
 const drawings = [
   'https://i.postimg.cc/TPZTn08W/0f00c43f3775ba5fcce443f4885aa56e.jpg',
   'https://i.postimg.cc/Bv8q8yz0/36-girl-with-butterfly-wings-to-color.jpg',
@@ -56,177 +52,157 @@ const drawings = [
     'https://i.postimg.cc/jS1TrcSk/Barbie-10.jpg',
     'https://i.postimg.cc/FsDmTN5v/Barbie-24.jpg',
     'https://i.postimg.cc/j2YdYXZr/Barbie-27.jpg',
-  'https://i.postimg.cc/cJ6JR6rP/bc2884b1a90b6d9db42580113054c40b.jpg'
+  'https://i.postimg.cc/cJ6JR6rP/bc2884b1a90b6d9db42580113054c40b.jpg',
 ];
 const savedImages = [];
 const canvas = document.getElementById('drawCanvas');
 const ctx = canvas.getContext('2d');
-let img = new Image(), tool='bucket', color='black';
-let scale=1, offset={x:0,y:0}, lastDist=null, lastMid=null;
-let isPanning=false, panStart={x:0,y:0};
-const undoStack=[], redoStack=[];
+let img = new Image();
+let tool = 'bucket', color = 'black';
+let scale = 1, offset = {x:0, y:0}, lastDist = null, lastMid = null;
+let isPanning = false, panStart = {x:0, y:0};
+const undoStack = [], redoStack = [];
 
-// Show/hide screens
-function show(id){
+// Show/Hide screens
+function show(id) {
   ['home','library','pageSelect','drawing'].forEach(x=>
-    document.getElementById(x).style.display = x===id ? 'flex':'none');
+    document.getElementById(x).style.display = x===id?'flex':'none');
 }
-function showLibrary(){
+function showLibrary() {
   show('library');
-  let lib = document.getElementById('library');
+  const lib = document.getElementById('library');
   lib.innerHTML = '<h2>Saved Images</h2>';
-  savedImages.forEach(src=>{
-    let i = document.createElement('img');
-    i.src = src; i.style.maxWidth='90%'; i.style.margin='10px';
-    lib.appendChild(i);
+  savedImages.forEach(src => {
+    const imgEl = document.createElement('img');
+    imgEl.src = src; imgEl.style.maxWidth='90%'; imgEl.style.margin='10px';
+    lib.appendChild(imgEl);
   });
-  let b = document.createElement('button');
-  b.textContent='⬅ Back'; b.onclick=()=>show('home');
+  const b = document.createElement('button');
+  b.textContent = '⬅ Back'; b.onclick = ()=>show('home');
   lib.appendChild(b);
 }
-function showPageSelect(){
+function showPageSelect() {
   show('pageSelect');
-  let ps = document.getElementById('pageSelect');
+  const ps = document.getElementById('pageSelect');
   ps.innerHTML = '<h2>Select a Page</h2>';
   drawings.forEach((src,i)=>{
-    let t = document.createElement('img');
+    const t = document.createElement('img');
     t.src = src; t.style.width='120px'; t.style.margin='10px';
     t.onclick = ()=>loadPage(i);
     ps.appendChild(t);
   });
-  let b = document.createElement('button');
-  b.textContent='⬅ Back'; b.onclick=()=>show('home');
+  const b = document.createElement('button');
+  b.textContent = '⬅ Back'; b.onclick = ()=>show('home');
   ps.appendChild(b);
 }
 
-// Undo/redo/save/clear/download
-function pushUndo(){
+// History & tools
+function pushUndo() {
   undoStack.push(canvas.toDataURL());
-  if(undoStack.length>50) undoStack.shift();
-  redoStack.length=0;
+  if (undoStack.length > 50) undoStack.shift();
+  redoStack.length = 0;
 }
-function restore(src){
-  let im = new Image();
-  im.onload = ()=>ctx.drawImage(im,0,0);
+function restore(src) {
+  const im = new Image();
+  im.onload = ()=>{ ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(im,0,0); };
   im.src = src;
 }
-function undo(){
-  if(undoStack.length<2) return;
-  redoStack.push(undoStack.pop());
-  restore(undoStack[undoStack.length-1]);
-}
-function redo(){
-  if(!redoStack.length) return;
-  let d = redoStack.pop();
-  undoStack.push(d);
-  restore(d);
-}
-function save(){
-  savedImages.push(canvas.toDataURL());
-  alert('Saved to library!');
-}
-function download(){
-  let a = document.createElement('a');
-  a.href = canvas.toDataURL(); a.download='coloring.png'; a.click();
-}
-function clearCanvas(){
-  scale = 1; offset={x:0,y:0};
-  ctx.setTransform(1,0,0,1,0,0);
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.drawImage(img,0,0,canvas.width,canvas.height);
-  pushUndo(); redraw();
-}
+function undo(){ if(undoStack.length<2)return; redoStack.push(undoStack.pop()); restore(undoStack[undoStack.length-1]); }
+function redo(){ if(!redoStack.length)return; const d=redoStack.pop(); undoStack.push(d); restore(d); }
+function save(){ savedImages.push(canvas.toDataURL()); alert('Saved to library!'); }
+function download(){ const a=document.createElement('a'); a.href=canvas.toDataURL(); a.download='coloring.png'; a.click(); }
+function clearCanvas(){ scale=1; offset={x:0,y:0}; redraw(); pushUndo(); }
 
 // Load & redraw
-function loadPage(i){
+function loadPage(i) {
   show('drawing');
   img = new Image();
-  img.crossOrigin='anonymous';
-  img.onload = ()=>{
-    scale =1; offset={x:0,y:0};
-    redraw(); pushUndo();
-  };
+  img.crossOrigin = 'anonymous';
+  img.onload = ()=>{ scale=1; offset={x:0,y:0}; redraw(); pushUndo(); };
   img.src = drawings[i]+'?v='+Date.now();
 }
 function redraw(){
   ctx.setTransform(scale,0,0,scale,offset.x,offset.y);
-  ctx.clearRect(-offset.x/scale, -offset.y/scale,
-                canvas.width/scale,canvas.height/scale);
+  ctx.clearRect(-offset.x/scale, -offset.y/scale, canvas.width/scale, canvas.height/scale);
   ctx.drawImage(img,0,0,canvas.width,canvas.height);
 }
 
-// Flood-fill & eraser (same as before)
+// Flood-fill & eraser
 function hexToRGBA(hex){
-  let tmp = document.createElement('div');
+  const tmp = document.createElement('div');
   tmp.style.color=hex; document.body.appendChild(tmp);
-  let [r,g,b]=getComputedStyle(tmp).color.match(/\d+/g).map(Number);
+  const [r,g,b]=getComputedStyle(tmp).color.match(/\d+/g).map(Number);
   document.body.removeChild(tmp);
   return {r,g,b,a:255};
 }
-function floodfill(data,sx,sy,fill,tol,w,h){
-  let base=data.slice((sy*w+sx)*4,(sy*w+sx)*4+4);
-  let diff=(a,b)=>Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1])+Math.abs(a[2]-b[2])+Math.abs(a[3]-b[3]);
-  let isM=px=>diff(px,base)<tol;
-  let stack=[{x:sx,y:sy}]; let visited=new Uint8Array(w*h);
+function floodfill(data, sx, sy, fill, tol, w, h){
+  const base=data.slice((sy*w+sx)*4,(sy*w+sx)*4+4);
+  const diff=(a,b)=>Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1])+Math.abs(a[2]-b[2])+Math.abs(a[3]-b[3]);
+  const isMatch = px => diff(px, base) < tol;
+  const stack=[{x:sx,y:sy}], visited=new Uint8Array(w*h);
   while(stack.length){
-    let {x,y}=stack.pop();
+    const {x,y} = stack.pop();
     if(x<0||x>=w||y<0||y>=h) continue;
-    let idx=y*w+x; if(visited[idx]) continue;
-    visited[idx]=1;
-    let i=idx*4,curr=data.slice(i,i+4);
-    if(!isM(curr)) continue;
-    data[i]=fill.r;data[i+1]=fill.g;data[i+2]=fill.b;data[i+3]=fill.a;
+    const idx=y*w+x; if(visited[idx]) continue;
+    visited[idx]=1; const i=idx*4, curr=data.slice(i,i+4);
+    if(!isMatch(curr)) continue;
+    data[i]=fill.r; data[i+1]=fill.g; data[i+2]=fill.b; data[i+3]=fill.a;
     stack.push({x:x+1,y},{x:x-1,y},{x,y:y+1},{x,y:y-1});
   }
 }
 
-// Input handling
-function getXY(e){
-  let r = canvas.getBoundingClientRect();
+// Map screen -> canvas coordinates
+function getCanvasCoords(clientX, clientY){
+  const rect = canvas.getBoundingClientRect();
   return {
-    x: Math.floor((e.clientX - r.left - offset.x)/scale),
-    y: Math.floor((e.clientY - r.top - offset.y)/scale)
+    x: Math.floor((clientX - rect.left - offset.x) / scale),
+    y: Math.floor((clientY - rect.top - offset.y) / scale)
   };
 }
+
+// Coloring input
 canvas.addEventListener('click', e=>{
-  const {x,y}=getXY(e);
-  if(tool==='bucket'){
-    let imgd=ctx.getImageData(0,0,canvas.width,canvas.height);
-    floodfill(imgd.data,x,y,hexToRGBA(color),60,imgd.width,imgd.height);
+  const {x,y} = getCanvasCoords(e.clientX, e.clientY);
+  if(tool === 'bucket'){
+    const imgd = ctx.getImageData(0,0,canvas.width,canvas.height);
+    floodfill(imgd.data, x, y, hexToRGBA(color), 60, imgd.width, imgd.height);
     ctx.putImageData(imgd,0,0);
     pushUndo();
   } else {
-    ctx.globalCompositeOperation='destination-out';
-    ctx.beginPath(); ctx.arc(x,y,10,0,2*Math.PI);
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    ctx.arc(x, y, 10, 0, Math.PI*2);
     ctx.fill();
-    ctx.globalCompositeOperation='source-over';
+    ctx.globalCompositeOperation = 'source-over';
+    redraw();
     pushUndo();
   }
 });
 
-// Touch zoom + pan with limits 1
-function dist(a,b){return Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);}
-function mid(a,b){return{ x:(a.clientX+b.clientX)/2, y:(a.clientY+b.clientY)/2 };}
+// Touch zoom + pan with limits
+function dist(a,b){return Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);}
+function mid(a,b){return {x:(a.clientX+b.clientX)/2, y:(a.clientY+b.clientY)/2};}
 canvas.addEventListener('touchstart', e=>{
   if(e.touches.length===2){
     e.preventDefault();
-    lastDist=dist(e.touches[0],e.touches[1]);
-    lastMid=mid(e.touches[0],e.touches[1]);
+    lastDist = dist(e.touches[0], e.touches[1]);
+    lastMid = mid(e.touches[0], e.touches[1]);
   } else if(e.touches.length===1){
-    isPanning=true;
-    panStart={x:e.touches[0].clientX-offset.x, y:e.touches[0].clientY-offset.y};
+    isPanning = true;
+    panStart = {x: e.touches[0].clientX - offset.x, y: e.touches[0].clientY - offset.y};
   }
 });
 canvas.addEventListener('touchmove', e=>{
   if(e.touches.length===2){
     e.preventDefault();
-    let d = dist(e.touches[0],e.touches[1]);
-    let m = mid(e.touches[0],e.touches[1]);
-    let factor = d/lastDist;
-    let newScale = scale * factor;
+    const d = dist(e.touches[0], e.touches[1]);
+    const m = mid(e.touches[0], e.touches[1]);
+    const f = d / lastDist;
+    const newScale = scale * f;
     if(newScale < MIN_SCALE || newScale > MAX_SCALE) return;
-    offset.x = m.x - factor*(lastMid.x - offset.x);
-    offset.y = m.y - factor*(lastMid.y - offset.y);
+    offset.x = m.x - f*(lastMid.x - offset.x);
+    offset.y = m.y - f*(lastMid.y - offset.y);
     scale = newScale;
     lastDist = d; lastMid = m;
     redraw();
@@ -237,27 +213,31 @@ canvas.addEventListener('touchmove', e=>{
   }
 });
 canvas.addEventListener('touchend', e=>{
-  if(e.touches.length<2) lastDist=null;
-  if(e.touches.length===0) isPanning=false;
+  if(e.touches.length < 2) lastDist = null;
+  if(e.touches.length === 0) isPanning = false;
 });
 
-// Initialize UI
-document.getElementById('undoBtn').onclick=undo;
-document.getElementById('redoBtn').onclick=redo;
-document.getElementById('saveBtn').onclick=save;
-document.getElementById('deleteBtn').onclick=clearCanvas;
-document.getElementById('downloadBtn').onclick=download;
+// UI Initialization
+document.getElementById('undoBtn').onclick = undo;
+document.getElementById('redoBtn').onclick = redo;
+document.getElementById('saveBtn').onclick = save;
+document.getElementById('deleteBtn').onclick = clearCanvas;
+document.getElementById('downloadBtn').onclick = download;
 document.querySelectorAll('.tool').forEach(el=>
-  el.onclick=()=>{
+  el.onclick = ()=>{
     tool = el.dataset.tool;
-    document.querySelectorAll('.tool').forEach(t=>t.classList.toggle('active',t===el));
+    document.querySelectorAll('.tool').forEach(t=>t.classList.toggle('active', t===el));
 });
-const colorArray=['black','gray','red','orange','yellow','green','blue','purple','pink','brown','white','cyan','magenta','lime','gold','navy','#ffe0bd','#ffcd94','#eac086','#ffad60','#ffe4c4'];
+const colorArray = ['black','gray','red','orange','yellow','green','blue','purple',
+  'pink','brown','white','cyan','magenta','lime','gold','navy',
+  '#ffe0bd','#ffcd94','#eac086','#ffad60','#ffe4c4'
+];
 colorArray.forEach(c=>{
-  let div=document.createElement('div');
-  div.className='color'; div.style.background=c;
-  div.onclick=()=>{
-    color=c;
+  const div = document.createElement('div');
+  div.className = 'color';
+  div.style.background = c;
+  div.onclick = ()=>{
+    color = c;
     document.querySelectorAll('.color').forEach(cc=>cc.classList.toggle('active',cc===div));
   };
   document.getElementById('bottom-bar').appendChild(div);
