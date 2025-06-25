@@ -1,114 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>Coloring Book App</title>
-  <style>
-    html, body {
-      margin: 0; padding: 0;
-      font-family: sans-serif;
-      height: 100%; width: 100%;
-      overflow: hidden;
-    }
-    body { display: flex; flex-direction: column; }
-
-    #home, #library, #pageSelect, #drawing {
-      display: none;
-      flex: 1; flex-direction: column;
-      align-items: center; justify-content: center;
-    }
-
-    #home {
-      background-color: #f5f5f5;
-      background: url('https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Rangoli_Design.jpg/800px-Rangoli_Design.jpg') no-repeat center center;
-      background-size: cover;
-    }
-
-    .home-btn {
-      margin: 20px; border: none; background: none;
-      cursor: pointer; display: flex;
-      flex-direction: column; align-items: center;
-    }
-    .home-btn img {
-      width: 200px; height: auto;
-    }
-    .home-label {
-      margin-top: 8px; font-size: 18px;
-      font-weight: bold; color: #fff;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
-    }
-
-    #pageSelect img, #library img {
-      width: 150px; margin: 10px;
-      border: 2px solid #333; cursor: pointer;
-    }
-
-    #top-bar {
-      display: flex; justify-content: space-around;
-      align-items: center; width: 100%;
-      background: #eee; padding: 8px;
-    }
-    #bottom-bar {
-      display: flex; justify-content: center;
-      flex-wrap: wrap; background: #eee;
-      padding: 10px;
-    }
-    .tool, .color {
-      margin: 4px; padding: 6px;
-      border: 1px solid #333; border-radius: 4px;
-      font-size: 20px; cursor: pointer;
-    }
-    .color { width: 28px; height: 28px; }
-
-    canvas {
-      border: none;
-      touch-action: none;
-      user-select: none;
-      width: 100vw;
-      height: calc(100vh - 100px); /* leave space for top/bottom bars */
-    }
-    .active { border: 2px solid red !important; }
-
-    /* Button background colors, text always black */
-    #undoBtn, #redoBtn { background: skyblue; color: black; }
-    #saveBtn { background: green; color: black; }
-    #deleteBtn { background: red; color: black; }
-    #downloadBtn { background: yellow; color: black; }
-  </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>Mobile Coloring Book with Zoom Limits</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body{height:100%;overflow:hidden;font-family:sans-serif;}
+  #home,#library,#pageSelect,#drawing{display:none;flex-direction:column;align-items:center;justify-content:center;height:100%;}
+  #home{display:flex;}
+  button{margin:12px;padding:12px 20px;font-size:18px;}
+  #top-bar,#bottom-bar{display:flex;align-items:center;background:#eee;padding:6px;width:100%;overflow-x:auto;}
+  canvas{touch-action:none;border:1px solid #ccc;background:#fff;max-width:100%;max-height:calc(100% - 104px);}
+  .tool,.color{margin:4px;padding:6px;border:1px solid #333;border-radius:4px;font-size:20px;cursor:pointer;}
+  .color{width:28px;height:28px;}
+  .active{border:2px solid red!important;}
+  #undoBtn{color:skyblue;}#redoBtn{color:orange;}#saveBtn{color:green;}
+  #deleteBtn{color:red;}#downloadBtn{color:goldenrod;}
+</style>
 </head>
 <body>
-
-<div id="home">
-  <button class="home-btn" onclick="showLibrary()">
-    <img src="https://img.icons8.com/clouds/200/000000/opened-folder.png" alt="Library" />
-    <div class="home-label">Library</div>
-  </button>
-  <button class="home-btn" onclick="showPageSelect()">
-    <img src="https://img.icons8.com/clouds/200/paint-palette.png" alt="Coloring Book" />
-    <div class="home-label">Coloring Book</div>
-  </button>
-</div>
-
-<div id="library"></div>
-<div id="pageSelect"></div>
-
-<div id="drawing">
-  <div id="top-bar">
-    <button id="undoBtn">Undo</button>
-    <button id="redoBtn">Redo</button>
-    <button id="saveBtn">Save</button>
-    <button id="deleteBtn">Delete</button>
-    <button id="downloadBtn">Download</button>
+  <div id="home">
+    <button onclick="showPageSelect()">🎨 Start Coloring</button>
+    <button onclick="showLibrary()">📚 Saved Images</button>
   </div>
-  <canvas id="drawCanvas"></canvas>
-  <div id="bottom-bar">
-    <div class="tool" data-tool="bucket">🪣</div>
-    <div class="tool" data-tool="eraser">🧽</div>
+  <div id="library"></div>
+  <div id="pageSelect"></div>
+  <div id="drawing">
+    <div id="top-bar">
+      <button id="undoBtn">Undo</button>
+      <button id="redoBtn">Redo</button>
+      <button id="saveBtn">Save</button>
+      <button id="deleteBtn">Delete</button>
+      <button id="downloadBtn">Download</button>
+    </div>
+    <canvas id="drawCanvas" width="600" height="600"></canvas>
+    <div id="bottom-bar">
+      <div class="tool" data-tool="bucket">🪣</div>
+      <div class="tool" data-tool="eraser">🧽</div>
+    </div>
   </div>
-</div>
 
 <script>
+// Configuration
+const MIN_SCALE = 0.5;
+const MAX_SCALE = 3;
+
+// State
 const drawings = [
   'https://i.postimg.cc/TPZTn08W/0f00c43f3775ba5fcce443f4885aa56e.jpg',
   'https://i.postimg.cc/Bv8q8yz0/36-girl-with-butterfly-wings-to-color.jpg',
@@ -118,226 +56,213 @@ const drawings = [
     'https://i.postimg.cc/jS1TrcSk/Barbie-10.jpg',
     'https://i.postimg.cc/FsDmTN5v/Barbie-24.jpg',
     'https://i.postimg.cc/j2YdYXZr/Barbie-27.jpg',
-  'https://i.postimg.cc/cJ6JR6rP/bc2884b1a90b6d9db42580113054c40b.jpg' 
+  'https://i.postimg.cc/cJ6JR6rP/bc2884b1a90b6d9db42580113054c40b.jpg'
 ];
 const savedImages = [];
 const canvas = document.getElementById('drawCanvas');
 const ctx = canvas.getContext('2d');
-const img = new Image();
-img.crossOrigin = 'anonymous';
+let img = new Image(), tool='bucket', color='black';
+let scale=1, offset={x:0,y:0}, lastDist=null, lastMid=null;
+let isPanning=false, panStart={x:0,y:0};
+const undoStack=[], redoStack=[];
 
-// mobile full screen adjustments
-function resizeCanvas() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight - document.getElementById('top-bar').offsetHeight - document.getElementById('bottom-bar').offsetHeight;
-  redrawCurrent();
+// Show/hide screens
+function show(id){
+  ['home','library','pageSelect','drawing'].forEach(x=>
+    document.getElementById(x).style.display = x===id ? 'flex':'none');
 }
-window.addEventListener('resize', resizeCanvas);
-
-let tool = 'bucket', color = 'black';
-let scale = 1, pan = { x:0, y:0 };
-let lastTouches = [];
-const undoStack = [], redoStack = [];
-let currentImageData = null;
-
-// initialize buttons
-document.getElementById('undoBtn').onclick = undo;
-document.getElementById('redoBtn').onclick = redo;
-document.getElementById('saveBtn').onclick = save;
-document.getElementById('deleteBtn').onclick = () => {
-  if (currentImageData) {
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    redrawCurrent();
-    pushUndo();
-  }
-};
-document.getElementById('downloadBtn').onclick = () => {
-  const a = document.createElement('a');
-  a.href = canvas.toDataURL('image/png');
-  a.download = 'coloring.png';
-  a.click();
-};
-
-function showHome() { hideAll(); document.getElementById('home').style.display='flex'; }
-function showLibrary() {
-  hideAll();
-  const lib = document.getElementById('library');
-  lib.style.display='flex'; lib.style.flexWrap='wrap';
+function showLibrary(){
+  show('library');
+  let lib = document.getElementById('library');
   lib.innerHTML = '<h2>Saved Images</h2>';
-  savedImages.forEach(src => {
-    const im = document.createElement('img');
-    im.src = src;
-    lib.appendChild(im);
+  savedImages.forEach(src=>{
+    let i = document.createElement('img');
+    i.src = src; i.style.maxWidth='90%'; i.style.margin='10px';
+    lib.appendChild(i);
   });
-  const b = document.createElement('button');
-  b.textContent = '⬅ Back';
-  b.onclick = showHome;
+  let b = document.createElement('button');
+  b.textContent='⬅ Back'; b.onclick=()=>show('home');
   lib.appendChild(b);
 }
-function showPageSelect() {
-  hideAll();
-  const ps = document.getElementById('pageSelect');
-  ps.style.display='flex'; ps.style.flexWrap='wrap';
-  ps.innerHTML = '<h2>Select a Drawing</h2>';
-  drawings.forEach((src,i) => {
-    const im = document.createElement('img');
-    im.src = src;
-    im.onclick = () => loadPage(i);
-    ps.appendChild(im);
+function showPageSelect(){
+  show('pageSelect');
+  let ps = document.getElementById('pageSelect');
+  ps.innerHTML = '<h2>Select a Page</h2>';
+  drawings.forEach((src,i)=>{
+    let t = document.createElement('img');
+    t.src = src; t.style.width='120px'; t.style.margin='10px';
+    t.onclick = ()=>loadPage(i);
+    ps.appendChild(t);
   });
-  const b = document.createElement('button');
-  b.textContent = '⬅ Back';
-  b.onclick = showHome;
+  let b = document.createElement('button');
+  b.textContent='⬅ Back'; b.onclick=()=>show('home');
   ps.appendChild(b);
 }
-function loadPage(idx) {
-  hideAll();
-  document.getElementById('drawing').style.display = 'flex';
-  img.onload = () => {
-    resizeCanvas();
-    updateTransform();
-    pushUndo();
-  };
-  img.src = drawings[idx] + '?v=' + Date.now();
-}
-function hideAll() {
-  ['home','library','pageSelect','drawing'].forEach(id => document.getElementById(id).style.display = 'none');
-}
 
-document.querySelectorAll('.tool').forEach(el => {
-  el.onclick = () => { tool = el.dataset.tool; updateUI(); };
-});
-const palette = ['black','gray','red','orange','yellow','green','blue','purple','pink','brown','white','cyan','magenta','lime','gold','navy',
-  '#ffe0bd','#ffcd94','#eac086','#ffad60','#ffe4c4'];
-const bar = document.getElementById('bottom-bar');
-palette.forEach(c => {
-  const d = document.createElement('div');
-  d.className = 'color';
-  d.style.background = c;
-  d.onclick = () => { color = c; updateUI(); };
-  bar.appendChild(d);
-});
-function updateUI() {
-  document.querySelectorAll('.tool').forEach(el => el.classList.toggle('active', el.dataset.tool === tool));
-  document.querySelectorAll('.color').forEach(el => el.classList.toggle('active', el.style.background === color));
-}
-
-// Flood fill enhanced
-function hexToRGBA(hex) {
-  const tm = document.createElement('div'); tm.style.color = hex;
-  document.body.appendChild(tm);
-  const [r,g,b] = getComputedStyle(tm).color.match(/\d+/g).map(Number);
-  document.body.removeChild(tm);
-  return { r, g, b, a:255 };
-}
-function floodfill(data, sx, sy, fill, tol, w, h) {
-  const base = data.slice((sy*w+sx)*4, (sy*w+sx)*4+4);
-  const diff = (p,q) => Math.abs(p[0]-q[0])+Math.abs(p[1]-q[1])+Math.abs(p[2]-q[2])+Math.abs(p[3]-q[3]);
-  const match = px => diff(px, base) < tol;
-  const stk = [{x:sx,y:sy}];
-  const vis = new Uint8Array(w*h);
-  while (stk.length) {
-    const {x,y} = stk.pop();
-    if (x<0||x>=w||y<0||y>=h) continue;
-    const idx = y*w + x;
-    if (vis[idx]) continue;
-    vis[idx] = 1;
-    const i = idx*4;
-    const cx = data.slice(i,i+4);
-    if (!match(cx)) continue;
-    data[i]=fill.r;data[i+1]=fill.g;data[i+2]=fill.b;data[i+3]=fill.a;
-    stk.push({x:x+1,y},{x:x-1,y},{x,y:y+1},{x,y:y-1});
-  }
-}
-
-// Drawing input
-function redrawCurrent() {
-  if (!img.src) return;
-  ctx.save();
-  ctx.setTransform(1,0,0,1,0,0);
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.restore();
-  ctx.drawImage(img, pan.x, pan.y, img.width*scale, img.height*scale);
-}
-function updateTransform() {
-  ctx.setTransform(scale,0,0,scale, pan.x, pan.y);
-  redrawCurrent();
-}
-
-canvas.addEventListener('touchmove', e => {
-  e.preventDefault();
-  const touches = e.touches;
-  if (touches.length === 2) {
-    const [a,b] = touches;
-    const d = Math.hypot(b.pageX-a.pageX, b.pageY-a.pageY);
-    if (lastTouches.length === 2) {
-      const ld = Math.hypot(lastTouches[1].pageX-lastTouches[0].pageX, lastTouches[1].pageY-lastTouches[0].pageY);
-      const delta = d/ld;
-      scale *= delta;
-      pan.x = (pan.x + a.pageX)*delta - a.pageX;
-      pan.y = (pan.y + a.pageY)*delta - a.pageY;
-    }
-    lastTouches = [a,b];
-    updateTransform();
-  } else if (touches.length === 1 && lastTouches.length === 1) {
-    const deltaX = touches[0].pageX - lastTouches[0].pageX;
-    const deltaY = touches[0].pageY - lastTouches[0].pageY;
-    pan.x += deltaX;
-    pan.y += deltaY;
-    lastTouches = [touches[0]];
-    updateTransform();
-  }
-});
-canvas.addEventListener('touchstart', e => {
-  lastTouches = Array.from(e.touches);
-});
-canvas.addEventListener('touchend', () => {
-  lastTouches = [];
-});
-canvas.addEventListener('touchcancel', () => { lastTouches = []; });
-
-canvas.addEventListener('touchend', e => {
-  if (e.touches.length === 0 && tool === 'bucket') {
-    const rect = canvas.getBoundingClientRect();
-    const x = (lastTouches[0].pageX - rect.left - pan.x)/scale;
-    const y = (lastTouches[0].pageY - rect.top - pan.y)/scale;
-    const imgd = ctx.getImageData(0,0,canvas.width,canvas.height);
-    floodfill(imgd.data, x|0, y|0, hexToRGBA(color), 60, imgd.width, imgd.height);
-    ctx.putImageData(imgd,0,0);
-    pushUndo();
-  }
-});
-
-// Undo/Redo/Save
+// Undo/redo/save/clear/download
 function pushUndo(){
   undoStack.push(canvas.toDataURL());
-  if (undoStack.length>50) undoStack.shift();
-  redoStack.length = 0;
+  if(undoStack.length>50) undoStack.shift();
+  redoStack.length=0;
+}
+function restore(src){
+  let im = new Image();
+  im.onload = ()=>ctx.drawImage(im,0,0);
+  im.src = src;
 }
 function undo(){
-  if (undoStack.length<2) return;
+  if(undoStack.length<2) return;
   redoStack.push(undoStack.pop());
   restore(undoStack[undoStack.length-1]);
 }
 function redo(){
-  if (!redoStack.length) return;
-  const d = redoStack.pop();
+  if(!redoStack.length) return;
+  let d = redoStack.pop();
   undoStack.push(d);
   restore(d);
-}
-function restore(src){
-  const i = new Image();
-  i.onload = () => ctx.drawImage(i, 0, 0);
-  i.src = src;
 }
 function save(){
   savedImages.push(canvas.toDataURL());
   alert('Saved to library!');
 }
+function download(){
+  let a = document.createElement('a');
+  a.href = canvas.toDataURL(); a.download='coloring.png'; a.click();
+}
+function clearCanvas(){
+  scale = 1; offset={x:0,y:0};
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.drawImage(img,0,0,canvas.width,canvas.height);
+  pushUndo(); redraw();
+}
 
-// Init
-showHome();
+// Load & redraw
+function loadPage(i){
+  show('drawing');
+  img = new Image();
+  img.crossOrigin='anonymous';
+  img.onload = ()=>{
+    scale =1; offset={x:0,y:0};
+    redraw(); pushUndo();
+  };
+  img.src = drawings[i]+'?v='+Date.now();
+}
+function redraw(){
+  ctx.setTransform(scale,0,0,scale,offset.x,offset.y);
+  ctx.clearRect(-offset.x/scale, -offset.y/scale,
+                canvas.width/scale,canvas.height/scale);
+  ctx.drawImage(img,0,0,canvas.width,canvas.height);
+}
+
+// Flood-fill & eraser (same as before)
+function hexToRGBA(hex){
+  let tmp = document.createElement('div');
+  tmp.style.color=hex; document.body.appendChild(tmp);
+  let [r,g,b]=getComputedStyle(tmp).color.match(/\d+/g).map(Number);
+  document.body.removeChild(tmp);
+  return {r,g,b,a:255};
+}
+function floodfill(data,sx,sy,fill,tol,w,h){
+  let base=data.slice((sy*w+sx)*4,(sy*w+sx)*4+4);
+  let diff=(a,b)=>Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1])+Math.abs(a[2]-b[2])+Math.abs(a[3]-b[3]);
+  let isM=px=>diff(px,base)<tol;
+  let stack=[{x:sx,y:sy}]; let visited=new Uint8Array(w*h);
+  while(stack.length){
+    let {x,y}=stack.pop();
+    if(x<0||x>=w||y<0||y>=h) continue;
+    let idx=y*w+x; if(visited[idx]) continue;
+    visited[idx]=1;
+    let i=idx*4,curr=data.slice(i,i+4);
+    if(!isM(curr)) continue;
+    data[i]=fill.r;data[i+1]=fill.g;data[i+2]=fill.b;data[i+3]=fill.a;
+    stack.push({x:x+1,y},{x:x-1,y},{x,y:y+1},{x,y:y-1});
+  }
+}
+
+// Input handling
+function getXY(e){
+  let r = canvas.getBoundingClientRect();
+  return {
+    x: Math.floor((e.clientX - r.left - offset.x)/scale),
+    y: Math.floor((e.clientY - r.top - offset.y)/scale)
+  };
+}
+canvas.addEventListener('click', e=>{
+  const {x,y}=getXY(e);
+  if(tool==='bucket'){
+    let imgd=ctx.getImageData(0,0,canvas.width,canvas.height);
+    floodfill(imgd.data,x,y,hexToRGBA(color),60,imgd.width,imgd.height);
+    ctx.putImageData(imgd,0,0);
+    pushUndo();
+  } else {
+    ctx.globalCompositeOperation='destination-out';
+    ctx.beginPath(); ctx.arc(x,y,10,0,2*Math.PI);
+    ctx.fill();
+    ctx.globalCompositeOperation='source-over';
+    pushUndo();
+  }
+});
+
+// Touch zoom + pan with limits 1
+function dist(a,b){return Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);}
+function mid(a,b){return{ x:(a.clientX+b.clientX)/2, y:(a.clientY+b.clientY)/2 };}
+canvas.addEventListener('touchstart', e=>{
+  if(e.touches.length===2){
+    e.preventDefault();
+    lastDist=dist(e.touches[0],e.touches[1]);
+    lastMid=mid(e.touches[0],e.touches[1]);
+  } else if(e.touches.length===1){
+    isPanning=true;
+    panStart={x:e.touches[0].clientX-offset.x, y:e.touches[0].clientY-offset.y};
+  }
+});
+canvas.addEventListener('touchmove', e=>{
+  if(e.touches.length===2){
+    e.preventDefault();
+    let d = dist(e.touches[0],e.touches[1]);
+    let m = mid(e.touches[0],e.touches[1]);
+    let factor = d/lastDist;
+    let newScale = scale * factor;
+    if(newScale < MIN_SCALE || newScale > MAX_SCALE) return;
+    offset.x = m.x - factor*(lastMid.x - offset.x);
+    offset.y = m.y - factor*(lastMid.y - offset.y);
+    scale = newScale;
+    lastDist = d; lastMid = m;
+    redraw();
+  } else if(e.touches.length===1 && isPanning){
+    offset.x = e.touches[0].clientX - panStart.x;
+    offset.y = e.touches[0].clientY - panStart.y;
+    redraw();
+  }
+});
+canvas.addEventListener('touchend', e=>{
+  if(e.touches.length<2) lastDist=null;
+  if(e.touches.length===0) isPanning=false;
+});
+
+// Initialize UI
+document.getElementById('undoBtn').onclick=undo;
+document.getElementById('redoBtn').onclick=redo;
+document.getElementById('saveBtn').onclick=save;
+document.getElementById('deleteBtn').onclick=clearCanvas;
+document.getElementById('downloadBtn').onclick=download;
+document.querySelectorAll('.tool').forEach(el=>
+  el.onclick=()=>{
+    tool = el.dataset.tool;
+    document.querySelectorAll('.tool').forEach(t=>t.classList.toggle('active',t===el));
+});
+const colorArray=['black','gray','red','orange','yellow','green','blue','purple','pink','brown','white','cyan','magenta','lime','gold','navy','#ffe0bd','#ffcd94','#eac086','#ffad60','#ffe4c4'];
+colorArray.forEach(c=>{
+  let div=document.createElement('div');
+  div.className='color'; div.style.background=c;
+  div.onclick=()=>{
+    color=c;
+    document.querySelectorAll('.color').forEach(cc=>cc.classList.toggle('active',cc===div));
+  };
+  document.getElementById('bottom-bar').appendChild(div);
+});
+show('home');
 </script>
-
 </body>
 </html>
