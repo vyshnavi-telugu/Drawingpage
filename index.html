@@ -2,240 +2,241 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Coloring Book – No Zoom</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Colouring App</title>
   <style>
-    html, body {
-      margin:0; padding:0; height:100%;
-      touch-action: manipulation; /* block double-finger zoom */
+    body, html { margin:0; padding:0; height:100%; }
+    body {
+      background: linear-gradient(to bottom right, brown, red);
+      display: flex; justify-content: center; align-items: center;
       font-family: sans-serif;
     }
-    body { display:flex; }
-    #sidebar { width:250px; background:#f0f0f0; padding:10px; }
-    #canvas-wrap { flex:1; display:flex; align-items:center; justify-content:center; }
-    canvas { border:1px solid #ccc; cursor:crosshair; }
-    .tool, .color, .btn {
-      margin:5px; padding:5px; cursor:pointer; display:inline-block;
+    #app { width:100%; max-width:480px; margin:auto; }
+    header { text-align:center; color:#fff; padding:1rem; font-size:1.5rem; }
+    .home, .editor { display:none; flex-direction:column; }
+    .active { display:flex; }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Colouring Book App</title>
+  <style>
+    html, body { margin:0; padding:0; height:100%; }
+    body {
+      background: linear-gradient(to bottom right, brown, red);
+      display: flex; justify-content: center; align-items: center;
+      font-family: sans-serif;
     }
-    .active { border:2px solid red !important; }
-    .color { width:24px; height:24px; }
+    #app { width:100%; max-width:480px; margin:auto; }
+    header { text-align:center; color:#fff; padding:1rem; font-size:1.5rem; }
+    .home, .editor { display:none; flex-direction:column; }
+    .active { display:flex; }
+    .toolbar, .library, .palette { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; padding:1rem; }
+    .thumb {
+      width:100px; height:140px;
+      background:#fff; border:1px solid #ccc;
+      cursor:pointer; display:flex; align-items:center; justify-content:center;
+      text-align:center; font-size:0.9rem;
+    }
+    .toolbar img, .toolbar button {
+      width:32px; height:32px;
+      background:none; border:none; cursor:pointer;
+      font-size:1.2rem;
+    }
+    .color-swatch {
+      width:24px; height:24px; border:2px solid #777;
+      cursor:pointer;
+    }
+    #canvas { background:#fff; touch-action:none; border:1px solid #ccc; }
+    .selected-swatch { border:4px solid #000; }
   </style>
 </head>
 <body>
-  <div id="sidebar">
-    <h4>Pages</h4><div id="pages"></div>
-    <h4>Tools</h4>
-    <div id="tools">
-      <div class="tool" data-tool="brush">Brush</div>
-      <div class="tool" data-tool="crayon">Crayon</div>
-      <div class="tool" data-tool="bucket">Bucket</div>
-      <div class="tool" data-tool="eraser">Eraser</div>
+  <div id="app">
+    <header>🎨 Colouring Book App</header>
+
+    <div id="home" class="home active">
+      <button id="toLibrary">Choose a Page</button>
+      <section id="library" class="library"></section>
     </div>
-    <h4>Colors</h4><div id="colors"></div>
-    <div>
-      <button id="undo" class="btn">Undo</button>
-      <button id="redo" class="btn">Redo</button>
-      <button id="save" class="btn">Save Dwg</button>
+
+    <div id="editor" class="editor">
+      <div class="toolbar">
+        <img id="bucketTool" src="https://img.icons8.com/ios-filled/50/000000/paint-bucket.png" title="Fill"/>
+        <img id="eraserTool" src="https://img.icons8.com/ios-filled/50/000000/eraser.png" title="Eraser"/>
+        <button id="undo">↶</button>
+        <button id="redo">↷</button>
+        <button id="clear">✕</button>
+        <button id="save">💾</button>
+        <button id="download">⬇️</button>
+      </div>
+      <div class="palette"></div>
+      <canvas id="canvas" width="360" height="480"></canvas>
+      <button onclick="goHome()">🏠 Home</button>
     </div>
   </div>
-  <div id="canvas-wrap"><canvas id="drawCanvas" width="600" height="600"></canvas></div>
 
   <script>
-    const drawings = [
-     'https://i.postimg.cc/TPZTn08W/0f00c43f3775ba5fcce443f4885aa56e.jpg',
-  'https://i.postimg.cc/Bv8q8yz0/36-girl-with-butterfly-wings-to-color.jpg',
-  'https://i.postimg.cc/pLsT5KXD/6331b296558cf1f8f7fd87cc9154f432.jpg',
-    'https://i.postimg.cc/2yYmK5Sk/7113dc553901fe5719b2c9e221449e28.jpg',
-    'https://i.postimg.cc/MKxKs9n7/adorable-fun-kids-coloring-page-delight-freepik-908673-3027.jpg',
-    'https://i.postimg.cc/jS1TrcSk/Barbie-10.jpg',
-    'https://i.postimg.cc/FsDmTN5v/Barbie-24.jpg',
-    'https://i.postimg.cc/j2YdYXZr/Barbie-27.jpg',
-  'https://i.postimg.cc/cJ6JR6rP/bc2884b1a90b6d9db42580113054c40b.jpg', 
+    const pages = [
+      { name: "Page 1", src: "https://yourdomain.com/page1.png" },
+      { name: "Page 2", src: "https://yourdomain.com/page2.png" },
+      { name: "Page 3", src: "https://yourdomain.com/page3.png" }
     ];
-    const canvas = document.getElementById('drawCanvas');
-    const ctx = canvas.getContext('2d');
-    ctx.lineCap = 'round';
-    let tool = 'brush', color = 'black', isDrawing = false, points = [];
-    let img = new Image(), undoStack = [], redoStack = [];
-    const toolsEl = document.getElementById('tools');
-    const colorsEl = document.getElementById('colors');
-    const pagesEl = document.getElementById('pages');
+    const colours = ['#FF0000','#00FF00','#0000FF','#FFFF00','#FF00FF','#00FFFF','#000000','#FFFFFF'];
 
-    // Load pages
-    drawings.forEach((src,i) => {
-      const btn = document.createElement('button');
-      btn.textContent = 'Page ' + (i+1);
-      btn.onclick = () => loadPage(i, true);
-      pagesEl.appendChild(btn);
-    });
+    const home = document.getElementById('home'),
+          library = document.getElementById('library'),
+          editor = document.getElementById('editor'),
+          canvas = document.getElementById('canvas'),
+          ctx = canvas.getContext('2d');
 
-    ['brush','crayon','bucket','eraser'].forEach(t => {
-      const el = document.querySelector(`.tool[data-tool="${t}"]`);
-      el.onclick = () => { tool = t; updateUI(); };
-    });
+    let currentTool = 'bucket',
+        currentColor = colours[0],
+        scale = 1,
+        lastDist = 0,
+        history = [], redoStack = [];
 
-    ['black','red','green','blue','orange'].forEach(c => {
+    pages.forEach(p => {
       const div = document.createElement('div');
-      div.className = 'color';
-      div.style.background = c;
-      div.onclick = () => { color = c; updateUI(); };
-      colorsEl.appendChild(div);
+      div.className = 'thumb';
+      div.textContent = p.name;
+      div.dataset.src = p.src;
+      library.appendChild(div);
     });
 
-    document.getElementById('undo').onclick = undo;
-    document.getElementById('redo').onclick = redo;
-    document.getElementById('save').onclick = () => {
-      const a = document.createElement('a');
-      a.href = canvas.toDataURL();
-      a.download = 'drawing.png';
-      a.click();
-    };
+    const paletteDiv = document.querySelector('.palette');
+    colours.forEach(c => {
+      const sw = document.createElement('div');
+      sw.className = 'color-swatch';
+      sw.style.background = c;
+      if (c === currentColor) sw.classList.add('selected-swatch');
+      sw.addEventListener('click', () => {
+        document.querySelectorAll('.color-swatch').forEach(el => el.classList.remove('selected-swatch'));
+        sw.classList.add('selected-swatch');
+        currentColor = c;
+      });
+      paletteDiv.appendChild(sw);
+    });
 
-    updateUI();
-    loadPage(0, false);
+    document.getElementById('toLibrary').onclick = goHome;
 
-    canvas.onmousedown = e => {
-      const {x,y} = getXY(e);
-      if (tool === 'bucket') {
-        const imgd = ctx.getImageData(0,0,canvas.width,canvas.height);
-        const rgba = hexToRGBA(color);
-        floodfill(imgd.data, x, y, rgba, 128, imgd.width, imgd.height);
-        ctx.putImageData(imgd, 0, 0);
-        pushUndo();
-      } else {
-        isDrawing = true;
-        points = [{x,y}];
-      }
-    };
+    library.addEventListener('click', e => {
+      if(!e.target.classList.contains('thumb')) return;
+      loadImage(e.target.dataset.src);
+    });
 
-    canvas.onmousemove = e => {
-      if (!isDrawing) return;
-      const {x,y} = getXY(e);
-      points.push({x,y});
-      redrawStroke();
-    };
-
-    canvas.onmouseup = () => {
-      if (isDrawing) { pushUndo(); isDrawing = false; }
-    };
-
-    function redrawStroke(){
-      const temp = ctx.getImageData(0,0,canvas.width,canvas.height);
-      ctx.putImageData(temp, 0, 0);
-      ctx.beginPath();
-      if (points.length < 3) {
-        const p = points[0];
-        ctx.arc(p.x, p.y, 1, 0, Math.PI*2);
-        if (tool==='eraser') ctx.fillStyle = 'white';
-        ctx.fill();
-        return;
-      }
-      ctx.strokeStyle = (tool === 'eraser' ? 'white' : color);
-      ctx.lineWidth = (tool === 'brush' ? 5 : tool === 'crayon' ? 15 : 20);
-      ctx.globalAlpha = (tool === 'crayon' ? 0.3 : 1);
-      ctx.moveTo(points[0].x, points[0].y);
-      for (let i = 1; i < points.length - 2; i++) {
-        const xc = (points[i].x + points[i+1].x)/2;
-        const yc = (points[i].y + points[i+1].y)/2;
-        ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
-      }
-      const last = points[points.length-1];
-      const sl = points[points.length-2];
-      ctx.quadraticCurveTo(sl.x, sl.y, last.x, last.y);
-      ctx.stroke();
-      ctx.globalAlpha = 1;
+    function goHome() {
+      home.classList.add('active');
+      editor.classList.remove('active');
     }
 
-    function getXY(e) {
-      const r = canvas.getBoundingClientRect();
-      return { x: e.clientX - r.left, y: e.clientY - r.top };
-    }
-
-    function updateUI(){
-      document.querySelectorAll('.tool').forEach(el => el.classList.toggle('active', el.dataset.tool===tool));
-      document.querySelectorAll('.color').forEach(el => el.classList.toggle('active', el.style.background===color));
-    }
-
-    function loadPage(idx, clearHistory){
-      if (clearHistory) { undoStack=[]; redoStack=[]; }
-      img = new Image();
-      img.crossOrigin = 'anonymous';
+    function loadImage(src) {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = src;
       img.onload = () => {
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(0,0,canvas.width,canvas.height);
-        ctx.drawImage(img,0,0,canvas.width,canvas.height);
-        pushUndo();
+        ctx.setTransform(1,0,0,1,0,0);
+        scale = 1;
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        ctx.drawImage(img, 0,0, canvas.width, canvas.height);
+        pushHistory();
+        home.classList.remove('active');
+        editor.classList.add('active');
       };
-      img.src = drawings[idx];
     }
 
-    function pushUndo(){
-      undoStack.push(canvas.toDataURL());
-      if (undoStack.length > 50) undoStack.shift();
+    ['bucketTool','eraserTool'].forEach(id => {
+      document.getElementById(id).onclick = () => currentTool = id === 'bucketTool' ? 'bucket' : 'eraser';
+    });
+
+    canvas.addEventListener('mousedown', e => {
+      paint(e.clientX, e.clientY);
+    });
+
+    function paint(cx, cy) {
+      const rect = canvas.getBoundingClientRect(),
+            x = (cx - rect.left) / scale,
+            y = (cy - rect.top) / scale;
+      ctx.fillStyle = currentTool === 'bucket' ? currentColor : '#FFFFFF';
+      ctx.fillRect(x - 10, y - 10, 20, 20);
+      pushHistory();
+    }
+
+    function pushHistory() {
+      history.push(canvas.toDataURL());
+      if(history.length > 50) history.shift();
       redoStack = [];
     }
 
-    function undo(){
-      if (undoStack.length < 2) return;
-      redoStack.push(undoStack.pop());
-      restore(undoStack[undoStack.length-1]);
-    }
-
-    function redo(){
-      if (!redoStack.length) return;
-      const data = redoStack.pop();
-      undoStack.push(data);
-      restore(data);
-    }
-
-    function restore(src){
-      const img2 = new Image();
-      img2.onload = () => ctx.drawImage(img2, 0, 0);
-      img2.src = src;
-    }
-
-    function floodfill(data, sx, sy, fill, tol, w, h){
-      const stack = [ {x: sx, y: sy} ];
-      const baseIdx = (sy*w + sx)*4;
-      const base = data.slice(baseIdx, baseIdx+4);
-      const match = px => (
-        Math.abs(px[0]-base[0])<=tol &&
-        Math.abs(px[1]-base[1])<=tol &&
-        Math.abs(px[2]-base[2])<=tol &&
-        Math.abs(px[3]-base[3])<=tol
-      );
-      while (stack.length) {
-        const {x, y} = stack.pop();
-        let nx = x;
-        while (nx >= 0 && match(data.slice((y*w+nx)*4, (y*w+nx)*4+4))) nx--;
-        nx++;
-        let spanUp=false, spanDn=false;
-        for (let xi = nx; xi < w && match(data.slice((y*w+xi)*4, (y*w+xi)*4+4)); xi++){
-          const pi = (y*w + xi)*4;
-          data[pi] = fill.r; data[pi+1] = fill.g;
-          data[pi+2] = fill.b; data[pi+3] = fill.a;
-          if (!spanUp && y>0) {
-            if (match(data.slice(((y-1)*w+xi)*4, ((y-1)*w+xi)*4+4))) {
-              stack.push({x:xi, y:y-1}); spanUp=true;
-            }
-          }
-          if (!spanDn && y<h-1) {
-            if (match(data.slice(((y+1)*w+xi)*4, ((y+1)*w+xi)*4+4))){
-              stack.push({x:xi, y:y+1}); spanDn=true;
-            }
-          }
-        }
+    document.getElementById('undo').onclick = () => {
+      if(history.length > 1) {
+        redoStack.push(history.pop());
+        const img = new Image();
+        img.src = history[history.length - 1];
+        img.onload = () => ctx.drawImage(img, 0, 0);
       }
+    };
+
+    document.getElementById('redo').onclick = () => {
+      if(redoStack.length) {
+        const data = redoStack.pop();
+        history.push(data);
+        const img = new Image();
+        img.src = data;
+        img.onload = () => ctx.drawImage(img, 0, 0);
+      }
+    };
+
+    document.getElementById('clear').onclick = () => {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      pushHistory();
+    };
+    document.getElementById('save').onclick = () => {
+      pushHistory();
+      alert('Drawing saved!');
+    };
+    document.getElementById('download').onclick = () => {
+      const a = document.createElement('a');
+      a.href = canvas.toDataURL('image/png');
+      a.download = 'coloring.png';
+      a.click();
+    };
+
+    canvas.addEventListener('touchstart', e => {
+      if(e.touches.length === 2) {
+        lastDist = Math.hypot(
+          e.touches[0].pageX - e.touches[1].pageX,
+          e.touches[0].pageY - e.touches[1].pageY
+        );
+      }
+    });
+
+    canvas.addEventListener('touchmove', e => {
+      if(e.touches.length === 2) {
+        e.preventDefault();
+        const curr = Math.hypot(
+          e.touches[0].pageX - e.touches[1].pageX,
+          e.touches[0].pageY - e.touches[1].pageY
+        );
+        const delta = curr / lastDist;
+        lastDist = curr;
+        scale *= delta;
+        redrawZoom();
+      }
+    });
+
+    function redrawZoom() {
+      const img = new Image();
+      img.src = history[history.length - 1];
+      img.onload = () => {
+        ctx.setTransform(scale, 0, 0, scale, 0, 0);
+        ctx.clearRect(0, 0, canvas.width/scale, canvas.height/scale);
+        ctx.drawImage(img, 0, 0, canvas.width/scale, canvas.height/scale);
+      };
     }
 
-    function hexToRGBA(hex){
-      const tmp = document.createElement('div');
-      tmp.style.color = hex;
-      document.body.appendChild(tmp);
-      const [r,g,b] = getComputedStyle(tmp).color.match(/\d+/g).map(Number);
-      document.body.removeChild(tmp);
-      return { r, g, b, a:255 };
-    }
+    pushHistory();
   </script>
 </body>
 </html>
