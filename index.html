@@ -1,18 +1,18 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
   <title>Coloring Book App</title>
   <style>
     html, body {
       margin: 0;
       padding: 0;
-      font-family: 'Comic Sans MS', cursive, sans-serif;
+      font-family: sans-serif;
       height: 100%;
       width: 100%;
       overflow: hidden;
       touch-action: none;
-      background: linear-gradient(to top right, #fff6e0, #ffe4e1);
     }
     body {
       display: flex;
@@ -26,113 +26,101 @@
       justify-content: center;
     }
     #home {
-      background: linear-gradient(to bottom right, #ffdee9, #b5fffc);
+      background: linear-gradient(to bottom right, brown, red);
     }
     .home-btn {
       margin: 20px;
       border: none;
-      background: transparent;
+      background: none;
       cursor: pointer;
-      transition: transform 0.2s ease;
-    }
-    .home-btn:hover {
-      transform: scale(1.05);
     }
     .home-btn img {
-      width: 180px;
+      width: 200px;
+      height: auto;
     }
     #pageSelect img, #library img {
       width: 150px;
       margin: 10px;
-      border: 3px solid #f06292;
-      border-radius: 10px;
+      border: 2px solid #333;
       cursor: pointer;
-      transition: transform 0.2s ease;
-    }
-    #pageSelect img:hover, #library img:hover {
-      transform: scale(1.05);
     }
     #top-bar {
       display: flex;
       justify-content: center;
       flex-wrap: wrap;
       gap: 10px;
-      background: #ffe0f0;
-      padding: 12px;
-      border-bottom: 2px solid #f06292;
+      background: #f0f0f0;
+      padding: 10px;
     }
     .top-btn {
-      padding: 10px 18px;
+      padding: 10px 20px;
       font-size: 16px;
       border: none;
-      background: #f06292;
-      color: white;
-      border-radius: 10px;
+      background: #ffc107;
+      border-radius: 8px;
       cursor: pointer;
-      box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
     }
     .top-btn:hover {
-      background: #ec407a;
+      background: #ff9800;
     }
     #canvas-container {
       flex: 1;
+      overflow: hidden;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: white;
+      background: #fff;
     }
     canvas {
-      border: 3px solid #f06292;
-      border-radius: 10px;
-      max-width: 100%;
-      max-height: 100%;
+      border: 1px solid #ccc;
       touch-action: none;
-      background: #fff5f8;
+      transform-origin: 0 0;
     }
     #bottom-bar {
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      background: #ffe0f0;
+      background: #eee;
       padding: 10px;
-      border-top: 2px solid #f06292;
     }
     .tool, .color {
-      margin: 5px;
-      padding: 8px;
-      border: 2px solid #f06292;
-      border-radius: 8px;
-      font-size: 22px;
+      margin: 4px;
+      padding: 6px;
+      border: 2px solid #333;
+      border-radius: 6px;
+      font-size: 20px;
       cursor: pointer;
-      background: white;
-      box-shadow: 1px 1px 4px rgba(0,0,0,0.1);
     }
     .color {
-      width: 32px;
-      height: 32px;
+      width: 30px;
+      height: 30px;
     }
     .active {
-      border: 3px solid #ff4081 !important;
+      border: 3px solid red !important;
     }
   </style>
 </head>
 <body>
+
 <div id="home">
-  <button class="home-btn" onclick="playSound(clickSound); showLibrary()">
+  <button class="home-btn" onclick="showLibrary()">
     <img src="https://img.icons8.com/clouds/200/000000/opened-folder.png" alt="Library" />
   </button>
-  <button class="home-btn" onclick="playSound(clickSound); showPageSelect()">
+  <button class="home-btn" onclick="showPageSelect()">
     <img src="https://img.icons8.com/clouds/200/paint-palette.png" alt="Coloring Book" />
   </button>
-</div><div id="library"></div>
+</div>
+
+<div id="library"></div>
 <div id="pageSelect"></div>
+
 <div id="drawing">
   <div id="top-bar">
-    <button class="top-btn" onclick="playSound(clickSound); undo()">Undo</button>
-    <button class="top-btn" onclick="playSound(clickSound); redo()">Redo</button>
-    <button class="top-btn" onclick="playSound(saveSound); save()">Save</button>
-    <button class="top-btn" onclick="playSound(clearSound); clearCanvas()">Clear</button>
-    <button class="top-btn" onclick="playSound(downloadSound); download()">Download</button>
+    <button class="top-btn" onclick="undo()">Undo</button>
+    <button class="top-btn" onclick="redo()">Redo</button>
+    <button class="top-btn" onclick="save()">Save</button>
+    <button class="top-btn" onclick="clearCanvas()">Clear</button>
+    <button class="top-btn" onclick="download()">Download</button>
   </div>
   <div id="canvas-container">
     <canvas id="drawCanvas" width="800" height="800"></canvas>
@@ -141,27 +129,24 @@
     <div class="tool" data-tool="bucket">🪣</div>
     <div class="tool" data-tool="eraser">🧽</div>
   </div>
-</div><audio id="clickSound" src="https://www.soundjay.com/button/sounds/button-29.mp3"></audio> <audio id="saveSound" src="https://www.soundjay.com/button/sounds/button-3.mp3"></audio> <audio id="clearSound" src="https://www.soundjay.com/button/sounds/button-2.mp3"></audio> <audio id="downloadSound" src="https://www.soundjay.com/button/sounds/button-16.mp3"></audio>
+</div>
 
 <script>
+const drawings = [
+  'https://i.postimg.cc/JnZMxXmY/bunny-carrot-coloring-page-600nw-2414476443.jpg',
+  'https://i.postimg.cc/cJ6JR6rP/bc2884b1a90b6d9db42580113054c40b.jpg',
+  'https://i.postimg.cc/tTxCcfd5/Barbie-6.jpg'
+];
+const savedImages = [];
 const canvas = document.getElementById('drawCanvas');
 const ctx = canvas.getContext('2d');
 const img = new Image();
-const savedImages = [];
+img.crossOrigin = 'anonymous';
 let tool = 'bucket';
 let color = 'black';
-let isDragging = false, dragStartX = 0, dragStartY = 0;
 let scale = 1, offsetX = 0, offsetY = 0;
+let isDragging = false, dragStartX = 0, dragStartY = 0;
 const undoStack = [], redoStack = [];
-
-const clickSound = document.getElementById('clickSound');
-const saveSound = document.getElementById('saveSound');
-const clearSound = document.getElementById('clearSound');
-const downloadSound = document.getElementById('downloadSound');
-function playSound(audio) {
-  audio.currentTime = 0;
-  audio.play();
-}
 
 function showHome() {
   hideAll(); document.getElementById('home').style.display = 'flex';
@@ -188,15 +173,10 @@ function showPageSelect() {
   ps.style.display = 'flex';
   ps.style.flexWrap = 'wrap';
   ps.innerHTML = '<h2>Select a Drawing</h2>';
-  const drawings = [
-    'https://i.postimg.cc/TPZTn08W/0f00c43f3775ba5fcce443f4885aa56e.jpg',
-    'https://i.postimg.cc/Bv8q8yz0/36-girl-with-butterfly-wings-to-color.jpg',
-    'https://i.postimg.cc/pLsT5KXD/6331b296558cf1f8f7fd87cc9154f432.jpg'
-  ];
   drawings.forEach((src, i) => {
     const thumb = document.createElement('img');
     thumb.src = src;
-    thumb.onclick = () => loadPage(src);
+    thumb.onclick = () => loadPage(i);
     ps.appendChild(thumb);
   });
   const back = document.createElement('button');
@@ -204,7 +184,7 @@ function showPageSelect() {
   back.onclick = showHome;
   ps.appendChild(back);
 }
-function loadPage(src) {
+function loadPage(idx) {
   hideAll();
   document.getElementById('drawing').style.display = 'flex';
   img.onload = () => {
@@ -213,11 +193,11 @@ function loadPage(src) {
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     pushUndo();
   };
-  img.crossOrigin = 'anonymous';
-  img.src = src + '?v=' + Date.now();
+  img.src = drawings[idx] + '?v=' + Date.now();
 }
 function hideAll() {
-  document.querySelectorAll('#home, #library, #pageSelect, #drawing').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('#home, #library, #pageSelect, #drawing')
+    .forEach(el => el.style.display = 'none');
 }
 document.querySelectorAll('.tool').forEach(el => {
   el.onclick = () => { tool = el.dataset.tool; updateUI(); };
@@ -251,7 +231,7 @@ canvas.addEventListener('mousemove', e => {
   if (isDragging) {
     offsetX = e.clientX - dragStartX;
     offsetY = e.clientY - dragStartY;
-    canvas.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+    updateTransform();
   }
 });
 canvas.addEventListener('mouseup', () => isDragging = false);
@@ -264,15 +244,18 @@ canvas.addEventListener('touchmove', e => {
   e.preventDefault();
   offsetX = e.touches[0].clientX - dragStartX;
   offsetY = e.touches[0].clientY - dragStartY;
-  canvas.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+  updateTransform();
 }, { passive: false });
 canvas.addEventListener('touchend', () => isDragging = false);
+function updateTransform() {
+  canvas.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+}
 function handleInput(e) {
   const {x, y} = getXY(e);
   if (tool === 'bucket') {
     const imgd = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const rgba = hexToRGBA(color);
-    floodfill(imgd.data, x, y, rgba, 20, canvas.width, canvas.height);
+    floodfill(imgd.data, x, y, rgba, 20, imgd.width, imgd.height);
     ctx.putImageData(imgd, 0, 0);
     pushUndo();
   } else if (tool === 'eraser') {
@@ -284,21 +267,6 @@ function handleInput(e) {
     pushUndo();
   }
 }
-function floodfill(data, sx, sy, fill, tol, w, h) {
-  const index = (sy * w + sx) * 4;
-  const base = data.slice(index, index + 4);
-  const match = (i) => Math.abs(data[i]-base[0])+Math.abs(data[i+1]-base[1])+Math.abs(data[i+2]-base[2]) < tol;
-  const stack = [{x: sx, y: sy}], visited = new Uint8Array(w*h);
-  while (stack.length) {
-    const {x, y} = stack.pop();
-    if (x<0||x>=w||y<0||y>=h) continue;
-    const i = (y*w+x)*4;
-    if (!match(i)||visited[y*w+x]) continue;
-    data[i]=fill.r; data[i+1]=fill.g; data[i+2]=fill.b; data[i+3]=255;
-    visited[y*w+x]=1;
-    stack.push({x:x+1,y},{x:x-1,y},{x,y+1},{x,y-1});
-  }
-}
 function hexToRGBA(hex) {
   const tmp = document.createElement('div');
   tmp.style.color = hex;
@@ -306,6 +274,24 @@ function hexToRGBA(hex) {
   const [r, g, b] = getComputedStyle(tmp).color.match(/\d+/g).map(Number);
   document.body.removeChild(tmp);
   return {r, g, b, a: 255};
+}
+function floodfill(data, sx, sy, fill, tol, w, h) {
+  const baseIdx = (sy * w + sx) * 4;
+  const baseColor = data.slice(baseIdx, baseIdx + 4);
+  const stack = [{x: sx, y: sy}];
+  const visited = new Uint8Array(w * h);
+  const match = (i) => {
+    return Math.abs(data[i]-baseColor[0]) + Math.abs(data[i+1]-baseColor[1]) + Math.abs(data[i+2]-baseColor[2]) < tol;
+  };
+  while (stack.length) {
+    const {x, y} = stack.pop();
+    if (x < 0 || x >= w || y < 0 || y >= h) continue;
+    const i = (y * w + x) * 4;
+    if (visited[y * w + x] || !match(i)) continue;
+    visited[y * w + x] = 1;
+    data[i] = fill.r; data[i+1] = fill.g; data[i+2] = fill.b; data[i+3] = fill.a;
+    stack.push({x:x+1,y}, {x:x-1,y}, {x,y+1}, {x,y-1});
+  }
 }
 function pushUndo() {
   undoStack.push(canvas.toDataURL());
@@ -324,9 +310,9 @@ function redo() {
   restore(data);
 }
 function restore(src) {
-  const image = new Image();
-  image.onload = () => ctx.drawImage(image, 0, 0);
-  image.src = src;
+  const img = new Image();
+  img.onload = () => ctx.drawImage(img, 0, 0);
+  img.src = src;
 }
 function save() {
   savedImages.push(canvas.toDataURL());
@@ -342,6 +328,8 @@ function download() {
   a.download = 'my_coloring.png';
   a.click();
 }
+
 showHome();
-</script></body>
+</script>
+</body>
 </html>
