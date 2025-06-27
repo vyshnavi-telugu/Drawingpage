@@ -45,6 +45,7 @@
   </div>
 
 <script>
+  // --- Data & State ---
   const drawings = [
     'https://i.postimg.cc/TPZTn08W/0f00c43f3775ba5fcce443f4885aa56e.jpg',
     'https://i.postimg.cc/JnZMxXmY/bunny-carrot-coloring-page-600nw-2414476443.jpg',
@@ -53,181 +54,226 @@
     'https://i.postimg.cc/2yYmK5Sk/7113dc553901fe5719b2c9e221449e28.jpg'
   ];
   const savedImages = JSON.parse(localStorage.getItem('lib')) || [];
-  const home = document.getElementById('home'),
-        library = document.getElementById('library'),
-        pageSelect = document.getElementById('pageSelect'),
-        drawing = document.getElementById('drawing'),
-        canvas = document.getElementById('cv'),
-        ctx = canvas.getContext('2d');
 
-  let img = new Image(), tool='bucket', color='black';
+  const home = document.getElementById('home');
+  const library = document.getElementById('library');
+  const pageSelect = document.getElementById('pageSelect');
+  const drawing = document.getElementById('drawing');
+  const canvas = document.getElementById('cv');
+  const ctx = canvas.getContext('2d');
+
+  let img = new Image(), tool = 'bucket', color = 'black';
   const undoStack = [], redoStack = [];
-  let scale=1, offsetX=0, offsetY=0, lastDist=0, panning=false, panStart={};
+  let scale = 1, offsetX = 0, offsetY = 0;
+  let lastDist = 0, panning = false, panStart = {};
 
+  // --- Initial Setup ---
   showHome();
   img.crossOrigin = 'anonymous';
   img.onload = () => { drawImage(); pushUndo(); };
 
+  // Color & Tool UI
   document.getElementById('bucketBtn').classList.add('active');
-  function selectTool(t){
+  function selectTool(t) {
     tool = t;
-    document.getElementById('bucketBtn').classList.toggle('active', t==='bucket');
-    document.getElementById('eraserBtn').classList.toggle('active', t==='eraser');
+    document.getElementById('bucketBtn').classList.toggle('active', t === 'bucket');
+    document.getElementById('eraserBtn').classList.toggle('active', t === 'eraser');
   }
-
-  const palette = ['black','gray','red','orange','yellow','green','blue','purple','pink','peach','tan','brown','white','cyan','magenta','navy','#f4c2c2','#FFD700','#00CED1'];
-  palette.forEach(c=>{
+  const colors = ['black','gray','red','orange','yellow','green','blue','purple','pink','tan','brown','white'];
+  colors.forEach(c => {
     const d = document.createElement('div');
-    d.className='color'; d.style.background=c;
-    if(c===color) d.classList.add('active');
-    d.onclick = ()=>{
-      color=c;
-      document.querySelectorAll('.color').forEach(e=>e.classList.toggle('active', e===d));
+    d.className = 'color'; d.style.background = c;
+    if (c === color) d.classList.add('active');
+    d.onclick = () => {
+      color = c;
+      document.querySelectorAll('.color').forEach(el => el.classList.toggle('active', el === d));
     };
     document.getElementById('bottom-bar').appendChild(d);
   });
 
-  function showHome(){
-    [home,library,pageSelect,drawing].forEach(v=>v.style.display='none');
-    home.style.display='flex';
+  // --- Navigation Views ---
+  function showHome() {
+    [home, library, pageSelect, drawing].forEach(v => v.style.display = 'none');
+    home.style.display = 'flex';
   }
-  function showLibrary(){
-    [home,pageSelect,drawing].forEach(v=>v.style.display='none');
+
+  function showLibrary() {
+    [home, pageSelect, drawing].forEach(v => v.style.display = 'none');
     library.innerHTML = '<button onclick="showHome()">⬅ Back</button>';
-    savedImages.forEach(src=>{
-      const im=document.createElement('img');
-      im.src=src;
+    savedImages.forEach(src => {
+      const im = document.createElement('img');
+      im.src = src;
       library.appendChild(im);
     });
-    library.style.display='flex';
+    library.style.display = 'flex';
   }
-  function showPageSelect(){
-    [home,library,drawing].forEach(v=>v.style.display='none');
+
+  function showPageSelect() {
+    [home, library, drawing].forEach(v => v.style.display = 'none');
     pageSelect.innerHTML = '<button onclick="showHome()">⬅ Back</button>';
-    drawings.forEach((s,i)=>{
-      const im=document.createElement('img');
-      im.src=s;
-      im.onclick=()=>loadPage(i);
+    drawings.forEach((s, i) => {
+      const im = document.createElement('img');
+      im.src = s;
+      im.onclick = () => loadPage(i);
       pageSelect.appendChild(im);
     });
-    pageSelect.style.display='flex';
-  }
-  function loadPage(i){
-    [home,library,pageSelect].forEach(v=>v.style.display='none');
-    drawing.style.display='flex';
-    scale=1; offsetX=0; offsetY=0;
-    img.src=drawings[i]+'?v='+Date.now();
+    pageSelect.style.display = 'flex';
   }
 
-  function drawImage(){
-    ctx.setTransform(scale,0,0,scale,offsetX,offsetY);
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.drawImage(img,0,0,canvas.width,canvas.height);
+  function loadPage(i) {
+    [home, library, pageSelect].forEach(v => v.style.display = 'none');
+    drawing.style.display = 'flex';
+    scale = 1; offsetX = offsetY = 0;
+    img.src = drawings[i] + '?v=' + Date.now();
   }
 
-  function pushUndo(){
+  // --- Canvas Drawing & Utilities ---
+  function drawImage() {
+    ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  }
+
+  function pushUndo() {
     undoStack.push(canvas.toDataURL());
-    if(undoStack.length>30) undoStack.shift();
-    redoStack.length=0;
-  }
-  function undo(){
-    if(undoStack.length<2) return;
-    redoStack.push(undoStack.pop());
-    const data=undoStack[undoStack.length-1];
-    const i=new Image();
-    i.onload=()=>{ drawImage(); ctx.drawImage(i,0,0); };
-    i.src=data;
-  }
-  function redo(){
-    if(!redoStack.length) return;
-    const data=redoStack.pop();
-    undoStack.push(data);
-    const i=new Image();
-    i.onload=()=>{ drawImage(); ctx.drawImage(i,0,0); };
-    i.src=data;
+    if (undoStack.length > 30) undoStack.shift();
+    redoStack.length = 0;
   }
 
-  canvas.addEventListener('touchstart',e=>{
-    if(e.touches.length===1){
-      panning=true;
-      panStart={x: e.touches[0].clientX-offsetX, y: e.touches[0].clientY-offsetY};
-    } else if(e.touches.length===2){
-      lastDist=dist(e.touches[0],e.touches[1]);
+  function undo() {
+    if (undoStack.length < 2) return;
+    redoStack.push(undoStack.pop());
+    const data = undoStack[undoStack.length - 1];
+    const i = new Image();
+    i.onload = () => {
+      drawImage();
+      ctx.drawImage(i, 0, 0);
+    };
+    i.src = data;
+  }
+
+  function redo() {
+    if (!redoStack.length) return;
+    const data = redoStack.pop();
+    undoStack.push(data);
+    const i = new Image();
+    i.onload = () => {
+      drawImage();
+      ctx.drawImage(i, 0, 0);
+    };
+    i.src = data;
+  }
+
+  // Pan & Pinch-Zoom Touch
+  canvas.addEventListener('touchstart', e => {
+    if (e.touches.length === 1) {
+      panning = true;
+      panStart = {
+        x: e.touches[0].clientX - offsetX,
+        y: e.touches[0].clientY - offsetY
+      };
+    } else if (e.touches.length === 2) {
+      lastDist = distance(e.touches[0], e.touches[1]);
     }
   });
-  canvas.addEventListener('touchmove',e=>{
+
+  canvas.addEventListener('touchmove', e => {
     e.preventDefault();
-    if(e.touches.length===1 && panning){
-      offsetX=e.touches[0].clientX-panStart.x;
-      offsetY=e.touches[0].clientY-panStart.y;
+    if (e.touches.length === 1 && panning) {
+      offsetX = e.touches[0].clientX - panStart.x;
+      offsetY = e.touches[0].clientY - panStart.y;
       drawImage();
-    } else if(e.touches.length===2){
-      const d=dist(e.touches[0],e.touches[1]), z=d/lastDist; lastDist=d;
-      const m = mid(e.touches[0],e.touches[1]);
-      offsetX-=(m.x-offsetX)*(z-1);
-      offsetY-=(m.y-offsetY)*(z-1);
-      scale*=z;
+    } else if (e.touches.length === 2) {
+      const d = distance(e.touches[0], e.touches[1]);
+      const z = d / lastDist;
+      lastDist = d;
+      const m = midpoint(e.touches[0], e.touches[1]);
+      offsetX -= (m.x - offsetX) * (z - 1);
+      offsetY -= (m.y - offsetY) * (z - 1);
+      scale *= z;
       drawImage();
     }
-  }, {passive:false});
-  canvas.addEventListener('touchend',e=>{
-    if(e.changedTouches.length===1 && !panning){
-      const t=e.changedTouches[0], rect=canvas.getBoundingClientRect();
-      const x=(t.clientX-rect.left-offsetX)/scale;
-      const y=(t.clientY-rect.top-offsetY)/scale;
-      if(tool==='bucket'){
-        floodFill(Math.floor(x),Math.floor(y));
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', e => {
+    if (e.changedTouches.length === 1 && !panning) {
+      const t = e.changedTouches[0];
+      const rect = canvas.getBoundingClientRect();
+      const x = (t.clientX - rect.left - offsetX) / scale;
+      const y = (t.clientY - rect.top - offsetY) / scale;
+
+      if (tool === 'bucket') {
+        floodFill(Math.floor(x), Math.floor(y));
         pushUndo();
       } else {
-        ctx.setTransform(scale,0,0,scale,offsetX,offsetY);
-        ctx.clearRect(x-10,y-10,20,20);
+        ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
+        ctx.clearRect(x - 10, y - 10, 20, 20);
         pushUndo();
       }
     }
-    if(e.touches.length===0) panning=false;
+    if (e.touches.length === 0) panning = false;
   });
-  function dist(a,b){ return Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY); }
-  function mid(a,b){ return { x:(a.clientX+b.clientX)/2, y:(a.clientY+b.clientY)/2 }; }
 
-  function floodFill(sx,sy){
-    const w=canvas.width,h=canvas.height;
-    const imgd=ctx.getImageData(0,0,w,h), data=imgd.data;
-    const base=getPixel(data,sx,sy,w);
-    const fill=hexToRGBA(color);
-    if(!match(base,fill)){
-      const stack=[{x:sx,y:sy}];
-      while(stack.length){
-        const p=stack.pop(), idx=(p.y*w+p.x)*4;
-        if(!match(getPixel(data,p.x,p.y,w),base)) continue;
-        setPixel(data,idx,fill);
-        if(p.x>0) stack.push({x:p.x-1,y:p.y});
-        if(p.x<w-1) stack.push({x:p.x+1,y:p.y});
-        if(p.y>0) stack.push({x:p.x,y:p.y-1});
-        if(p.y<h-1) stack.push({x:p.x,y:p.y+1});
+  function distance(a, b) {
+    return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+  }
+  function midpoint(a, b) {
+    return {
+      x: (a.clientX + b.clientX) / 2,
+      y: (a.clientY + b.clientY) / 2
+    };
+  }
+
+  // Flood-Fill Algorithm
+  function floodFill(sx, sy) {
+    const w = canvas.width, h = canvas.height;
+    const imgd = ctx.getImageData(0, 0, w, h), data = imgd.data;
+    const base = getPixel(data, sx, sy, w);
+    const fillColor = hexToRGBA(color);
+    if (!matchColor(base, fillColor)) {
+      const stack = [{ x: sx, y: sy }];
+      while (stack.length) {
+        const p = stack.pop();
+        const idx = (p.y * w + p.x) * 4;
+        if (!matchColor(getPixel(data, p.x, p.y, w), base)) continue;
+        setPixel(data, idx, fillColor);
+        if (p.x > 0) stack.push({ x: p.x - 1, y: p.y });
+        if (p.x < w - 1) stack.push({ x: p.x + 1, y: p.y });
+        if (p.y > 0) stack.push({ x: p.x, y: p.y - 1 });
+        if (p.y < h - 1) stack.push({ x: p.x, y: p.y + 1 });
       }
-      ctx.putImageData(imgd,0,0);
+      ctx.putImageData(imgd, 0, 0);
     }
   }
-  function getPixel(data,x,y,w){ const i=(y*w+x)*4; return {r:data[i],g:data[i+1],b:data[i+2],a:data[i+3]}; }
-  function setPixel(data,i,c){ data[i]=c.r;data[i+1]=c.g;data[i+2]=c.b;data[i+3]=c.a; }
-  function match(a,b){ return a.r===b.r&&a.g===b.g&&a.b===b.b&&a.a===b.a; }
-  function hexToRGBA(hex){
-    const tmp=document.createElement('div');
-    tmp.style.color=hex; document.body.appendChild(tmp);
-    const [r,g,b]=getComputedStyle(tmp).color.match(/\d+/g).map(Number);
+  function getPixel(d, x, y, w) {
+    const i = (y * w + x) * 4;
+    return { r: d[i], g: d[i+1], b: d[i+2], a: d[i+3] };
+  }
+  function setPixel(d, i, c) {
+    d[i] = c.r; d[i+1] = c.g; d[i+2] = c.b; d[i+3] = c.a;
+  }
+  function matchColor(a, b) {
+    return a.r===b.r && a.g===b.g && a.b===b.b && a.a===b.a;
+  }
+  function hexToRGBA(hex) {
+    const tmp = document.createElement('div');
+    tmp.style.color = hex;
+    document.body.appendChild(tmp);
+    const [r,g,b] = getComputedStyle(tmp).color.match(/\d+/g).map(Number);
     document.body.removeChild(tmp);
-    return {r,g,b,a:255};
+    return { r, g, b, a: 255 };
   }
 
-  function save(){
+  // Save & Download
+  function save() {
     savedImages.unshift(canvas.toDataURL());
-    localStorage.setItem('lib',JSON.stringify(savedImages));
-    alert('Saved!');
+    localStorage.setItem('lib', JSON.stringify(savedImages));
+    alert('Saved to Library!');
   }
-  function download(){
-    const a=document.createElement('a');
-    a.href=canvas.toDataURL();
-    a.download='coloring.png';
+  function download() {
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL();
+    a.download = 'coloring.png';
     a.click();
   }
 </script>
