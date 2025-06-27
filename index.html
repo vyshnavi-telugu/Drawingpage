@@ -1,69 +1,45 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Coloring App</title>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Coloring App</title>
 <style>
 html,body{margin:0;padding:0;height:100%;overflow:hidden;touch-action:none;font-family:'Comic Sans MS';background:#fff6e0}
 #home,#library,#pageSelect,#drawing{display:none;flex-direction:column;width:100%;height:100%}
-#home{display:flex;justify-content:center;align-items:center;background:linear-gradient(to bottom right,#ffdee9,#b5fffc)}
-.home-btn{display:flex;flex-direction:column;align-items:center;margin:0 20px}
-.home-btn img{width:180px}
-.home-btn span{margin-top:10px;font-size:1.2rem;font-weight:bold;color:#f06292}
-#library h2,#pageSelect h2{margin:10px;font-size:1.5rem;font-weight:bold;color:#f06292}
-#library,#pageSelect{display:flex;flex-direction:column;overflow-y:auto;align-items:center;padding:0}
-#pageSelect img,#library img{width:150px;margin:10px;border:3px solid #f06292;border-radius:10px;cursor:pointer}
-#top-bar{display:flex;gap:5px;padding:8px;background:#ffe0f0;overflow-x:auto;flex-shrink:0}
+#home{display:flex;justify-content:center;align-items:center;background:linear-gradient(to bottom right,#ffdee9,#b5fffc);flex-direction:column}
+.home-btn{margin:10px}
+.home-label{font-size:20px;font-weight:bold;margin-top:5px;color:#333}
+#top-bar{display:flex;gap:8px;padding:8px;background:#ffe0f0;flex-wrap:wrap;align-items:center;box-shadow:0 2px 4px rgba(0,0,0,0.1);z-index:1}
 #canvas-container{flex:1;position:relative;overflow:hidden;background:#fff}
 canvas{display:block;touch-action:none;border-radius:10px}
-#bottom-bar{display:flex;gap:5px;overflow-x:auto;background:#ffe0f0;padding:8px;flex-shrink:0;border-top:2px solid #ccc;box-shadow:inset 0 5px 5px -5px rgba(0,0,0,0.3)}
-button,.tool,.color{padding:6px;font-size:16px;border:none;border-radius:8px;cursor:pointer;background:#f06292;color:white;box-shadow:2px 2px 5px rgba(0,0,0,0.2);flex-shrink:0}
+#bottom-bar{display:flex;gap:6px;overflow-x:auto;background:#ffe0f0;padding:8px;box-shadow:inset 0 3px 3px -3px rgba(0,0,0,0.3);}
+button,.tool,.color{padding:6px;font-size:16px;border:none;border-radius:8px;cursor:pointer;background:#f06292;color:#fff;flex-shrink:0;box-shadow:1px 1px 4px rgba(0,0,0,0.1)}
 .tool,.color{width:36px;height:36px;display:flex;align-items:center;justify-content:center}
-.color{border:3px solid #333}
+.color{border:2px solid #333}
 .active{border:3px solid #ff4081!important}
-</style>
-</head>
-<body>
-
+</style></head><body>
 <div id="home">
-  <button class="home-btn" onclick="showLibrary()">
-    <img src="https://img.icons8.com/clouds/200/000000/opened-folder.png"/>
-    <span>My Album</span>
-  </button>
-  <button class="home-btn" onclick="showPageSelect()">
-    <img src="https://img.icons8.com/clouds/200/000000/paint-palette.png"/>
-    <span>Colouring Book</span>
-  </button>
+  <button class="home-btn" onclick="showLibrary()"><img src="https://img.icons8.com/clouds/150/000000/opened-folder.png"/><div class="home-label">My Album</div></button>
+  <button class="home-btn" onclick="showPageSelect()"><img src="https://img.icons8.com/clouds/150/000000/paint-palette.png"/><div class="home-label">Colouring Book</div></button>
 </div>
-
-<div id="library"><h2>My Album</h2><div><button onclick="showHome()">⬅ Back</button></div></div>
-<div id="pageSelect"><h2>Colouring Book</h2><div><button onclick="showHome()">⬅ Back</button></div></div>
-
+<div id="library"><h2>My Album</h2></div>
+<div id="pageSelect"><h2>Colouring Book</h2></div>
 <div id="drawing" style="display:flex;flex-direction:column;height:100%">
   <div id="top-bar">
-    <button onclick="undo()">⎌</button>
-    <button onclick="redo()">↻</button>
-    <button onclick="save()">💾</button>
-    <button onclick="download()">⬇</button>
-    <button onclick="clearCanvas()">🗑</button>
-    <button onclick="showHome()">🏠</button>
+    <button onclick="undo()">⎌</button><button onclick="redo()">↻</button>
+    <button onclick="save()">💾</button><button onclick="download()">⬇</button>
+    <button onclick="clearCanvas()">🗑</button><button onclick="showHome()">🏠</button>
   </div>
   <div id="canvas-container"><canvas id="canvas"></canvas></div>
-  <div id="bottom-bar"></div>
+  <div id="bottom-bar"><div class="tool" data-tool="bucket">🪣</div><div class="tool" data-tool="eraser">🧽</div></div>
 </div>
-
 <audio id="clickSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_059f6bff69.mp3?filename=click-124467.mp3"></audio>
 
 <script>
 const STORAGE_KEY='myColorLib';
 let saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
-const canvas=document.getElementById('canvas'),ctx=canvas.getContext('2d');
-const img=new Image(); img.crossOrigin='anonymous';
+const c=document.getElementById('canvas'),ctx=c.getContext('2d'),img=new Image();img.crossOrigin='anonymous';
 const clickSound=document.getElementById('clickSound');
-let tool='bucket',color='black',scale=1,tx=0,ty=0,isDrag=false,start=null,lastDist=null;
+let tool='bucket',color='black',scale=1,tx=0,ty=0,isDrag=false,start,lastDist;
 const undoStack=[],redoStack=[];
-const colors=['black','darkgray','red','orange','yellow','lime','green','teal','blue','navy','purple','magenta','hotpink','peachpuff','tan','saddlebrown','white','cyan','olive','maroon','#8B0000','#00CED1','#ADFF2F','#FF1493','#FF4500','#2E8B57'];
+const colors=['black','gray','red','orange','yellow','green','blue','purple','pink','peach','tan','brown','white','cyan','magenta','navy','#8B0000','#00CED1','#ADFF2F','#FF1493','#800080','#FFA500'];
 const drawings=[
   'https://i.postimg.cc/TPZTn08W/0f00c43f3775ba5fcce443f4885aa56e.jpg',
   'https://i.postimg.cc/JnZMxXmY/bunny-carrot-coloring-page-600nw-2414476443.jpg',
@@ -85,80 +61,45 @@ const drawings=[
 
 function resizeCanvas(){
   const r=document.getElementById('canvas-container').getBoundingClientRect();
-  canvas.width=r.width;canvas.height=r.height;
+  c.width=r.width; c.height=r.height;
   drawImageScaled();
 }
 window.addEventListener('resize',resizeCanvas);
 
 function init(){
   const bottom=document.getElementById('bottom-bar');
-  colors.forEach(c=>{
-    const d=document.createElement('div');
-    d.className='color'; d.style.background=c;
-    d.onclick=()=>{color=c;updateUI();clickSound.play()};
-    bottom.appendChild(d);
-  });
-  ['bucket','eraser'].forEach(name=>{
-    const t=document.createElement('div');
-    t.className='tool'; t.dataset.tool=name;
-    t.textContent=name==='bucket'?'🪣':'🧽';
-    t.onclick=()=>{tool=name;updateUI();clickSound.play()};
-    bottom.appendChild(t);
-  });
+  colors.forEach(col=>{let d=document.createElement('div');d.className='color';d.style.background=col;d.onclick=()=>{color=col;updateUI();clickSound.play()};bottom.appendChild(d);});
+  document.querySelectorAll('.tool').forEach(t=>t.onclick=()=>{tool=t.dataset.tool;updateUI();clickSound.play();});
   updateUI();
-
-  const ps=document.getElementById('pageSelect');
-  drawings.forEach((src,i)=>{
-    const im=document.createElement('img');
-    im.src=src;
-    im.onclick=()=>loadPage(i);
-    ps.appendChild(im);
-  });
-
-  showHome();
-  window.onload=resizeCanvas;
+  const lib=document.getElementById('library'), ps=document.getElementById('pageSelect');
+  lib.innerHTML='<h2>My Album</h2>'; ps.innerHTML='<h2>Colouring Book</h2>';
+  const back=document.createElement('button');back.textContent='⬅ Back';back.onclick=showHome; lib.appendChild(back);ps.appendChild(back.cloneNode(true));
+  saved.forEach(s=>{let i=document.createElement('img');i.src=s;lib.appendChild(i)});
+  drawings.forEach((src,i)=>{let im=document.createElement('img');im.src=src;im.onclick=()=>loadPage(i);ps.appendChild(im)});
+  showHome(); window.onload=resizeCanvas;
 }
 
 function updateUI(){
   document.querySelectorAll('.tool').forEach(el=>el.classList.toggle('active',el.dataset.tool===tool));
   document.querySelectorAll('.color').forEach(el=>el.classList.toggle('active',el.style.background===color));
 }
-
-function hideAll(){
-  ['home','library','pageSelect','drawing'].forEach(id=>document.getElementById(id).style.display='none');
-}
+function hideAll(){['home','library','pageSelect','drawing'].forEach(id=>document.getElementById(id).style.display='none')}
 function showHome(){hideAll();document.getElementById('home').style.display='flex'}
-function showLibrary(){
-  hideAll();
-  const lib=document.getElementById('library');
-  lib.innerHTML='<h2>My Album</h2>';
-  saved.forEach(s=>{
-    const i=document.createElement('img');
-    i.src=s; lib.appendChild(i);
-  });
-  const btn=document.createElement('button');
-  btn.textContent='⬅ Back'; btn.onclick=showHome; lib.appendChild(btn);
-  lib.style.display='flex';
-}
-function showPageSelect(){
-  hideAll();document.getElementById('pageSelect').style.display='flex';
-}
+function showLibrary(){hideAll();document.getElementById('library').style.display='flex'}
+function showPageSelect(){hideAll();document.getElementById('pageSelect').style.display='flex'}
 function loadPage(i){
   hideAll();document.getElementById('drawing').style.display='flex';
-  img.onload=()=>{scale=1;tx=ty=0;ctx.resetTransform();drawImageScaled();push()};
+  img.onload=()=>{scale=1;tx=ty=0;drawImageScaled();push();};
   img.src=drawings[i]+'?v='+Date.now();
-  resizeCanvas();
 }
 
-canvas.addEventListener('mousedown',e=>{isDrag=true;start={x:e.clientX,y:e.clientY}});
-canvas.addEventListener('mousemove',e=>{if(!isDrag)return;tx+=e.clientX-start.x;ty+=e.clientY-start.y;start={x:e.clientX,y:e.clientY};apply()});
-canvas.addEventListener('mouseup',_=>isDrag=false);
-canvas.addEventListener('mouseleave',_=>isDrag=false);
-canvas.addEventListener('click',onPointer);
-
-canvas.addEventListener('touchstart',onTouchStart);
-canvas.addEventListener('touchmove',onTouchMove,{passive:false});
-canvas.addEventListener('touchend',_=>{isDrag=false;if(event.touches.length<2)lastDist=null});
+c.addEventListener('mousedown',e=>{isDrag=true;start={x:e.clientX,y:e.clientY}});
+c.addEventListener('mousemove',e=>{if(isDrag){tx+=e.clientX-start.x;ty+=e.clientY-start.y;start={x:e.clientX,y:e.clientY};apply()}});
+c.addEventListener('mouseup',()=>isDrag=false);c.addEventListener('mouseleave',()=>isDrag=false);
+c.addEventListener('click',onPointer);
+c.addEventListener('touchstart',onTouchStart);
+c.addEventListener('touchmove',onTouchMove,{passive:false});
+c.addEventListener('touchend',()=>{isDrag=false; if(event.touches.length<2) lastDist=null});
 
 function onTouchStart(e){
   if(e.touches.length===1){isDrag=true;start={x:e.touches[0].clientX,y:e.touches[0].clientY}}
@@ -166,79 +107,69 @@ function onTouchStart(e){
 }
 function onTouchMove(e){
   e.preventDefault();
-  if(e.touches.length===1&&isDrag){
+  if(e.touches.length===1 && isDrag){
     tx+=e.touches[0].clientX-start.x;ty+=e.touches[0].clientY-start.y;
-    start={x:e.touches[0].clientX,y:e.touches[0].clientY};
-    apply();
+    start={x:e.touches[0].clientX,y:e.touches[0].clientY};apply();
   } else if(e.touches.length===2){
-    const newD=getDist(e),m=getMid(e);
-    let f=newD/lastDist;f=1+(f-1)/10;
+    const nd=getDist(e),m=getMid(e);
+    let f=nd/lastDist; f=1+(f-1)/10;
     const bx=(m.x-tx)/scale,by=(m.y-ty)/scale;
     scale*=f;tx=m.x-bx*scale;ty=m.y-by*scale;
-    lastDist=newD;apply();
+    lastDist=nd;apply();
   }
 }
-function getDist(e){const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;return Math.hypot(dx,dy)}
+function getDist(e){return Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY)}
 function getMid(e){return{x:(e.touches[0].clientX+e.touches[1].clientX)/2,y:(e.touches[0].clientY+e.touches[1].clientY)/2}}
-
-function apply(){
-  ctx.setTransform(scale,0,0,scale,tx,ty);
-  drawImageScaled();
-}
-
+function apply(){c.style.transform=`translate(${tx}px,${ty}px) scale(${scale})`;c.style.transformOrigin='0 0'}
 function getXY(e){
-  const pt=new DOMPoint(e.clientX,e.clientY).matrixTransform(ctx.getTransform().invertSelf());
-  return {x:Math.floor(pt.x),y:Math.floor(pt.y)};
+  const r=c.getBoundingClientRect(),ex=e.clientX||(e.touches&&e.touches[0].clientX),ey=e.clientY||(e.touches&&e.touches[0].clientY);
+  return {x:Math.floor((ex-r.left-tx)/scale),y:Math.floor((ey-r.top-ty)/scale)};
 }
 
 function onPointer(e){
   if(!img.src)return;
-  const bg={r:255,g:246,b:224,a:255};
-  const p=getXY(e);
+  const p=getXY(e),bg={r:255,g:246,b:224,a:255};
   clickSound.currentTime=0;clickSound.play();
-  const id=ctx.getImageData(0,0,canvas.width,canvas.height),d=id.data;
-  if(tool==='bucket')flood(d,p.x,p.y,hexToRGBA(color),25,canvas.width,canvas.height);
-  else flood(d,p.x,p.y,bg,25,canvas.width,canvas.height);
-  ctx.putImageData(id,0,0);
-  push();
+  const id=ctx.getImageData(0,0,c.width,c.height),d=id.data;
+  tool==='bucket'?flood(d,p.x,p.y,hexToRGBA(color),25,c.width,c.height)
+                 :flood(d,p.x,p.y,bg,25,c.width,c.height);
+  ctx.putImageData(id,0,0);push();
 }
 
 function flood(data,x,y,c,t,w,h){
-  const startIdx=(y*w+x)*4,base=data.slice(startIdx,startIdx+4);
+  const st=(y*w+x)*4,base=data.slice(st,st+4);
   const match=px=>px.every((v,i)=>Math.abs(v-base[i])<t);
   const stack=[{x,y}],vis=new Uint8Array(w*h);
   while(stack.length){
     const p=stack.pop(),i=(p.y*w+p.x)*4;
     if(p.x<0||p.x>=w||p.y<0||p.y>=h||vis[p.y*w+p.x]||!match(data.slice(i,i+4)))continue;
     vis[p.y*w+p.x]=1;
-    data[i]=c.r;data[i+1]=c.g;data[i+2]=c.b;data[i+3]=c.a;
+    [data[i],data[i+1],data[i+2],data[i+3]]=[c.r,c.g,c.b,c.a];
     stack.push({x:p.x+1,y:p.y},{x:p.x-1,y:p.y},{x:p.x,y:p.y+1},{x:p.x,y:p.y-1});
   }
 }
 
 function hexToRGBA(hex){
   const tmp=document.createElement('div');tmp.style.color=hex;document.body.appendChild(tmp);
-  const [r,g,b]=getComputedStyle(tmp).color.match(/\d+/g).map(Number);
-  document.body.removeChild(tmp);
+  const [r,g,b]=getComputedStyle(tmp).color.match(/\d+/g).map(Number);document.body.removeChild(tmp);
   return {r,g,b,a:255};
 }
 
 function drawImageScaled(){
-  const cw=canvas.width,ch=canvas.height,iw=img.width,ih=img.height;
-  const r=Math.min(cw/iw,ch/ih),x=(cw-iw*r)/2,y=(ch-ih*r)/2;
+  const cw=c.width,ch=c.height,iw=img.width,ih=img.height,r=Math.min(cw/iw,ch/ih),
+        x=(cw-iw*r)/2,y=(ch-ih*r)/2;
   ctx.clearRect(0,0,cw,ch);
   ctx.drawImage(img,0,0,iw,ih,x,y,iw*r,ih*r);
 }
 
-function push(){undoStack.push(canvas.toDataURL());if(undoStack.length>30)undoStack.shift();redoStack.length=0}
+function push(){undoStack.push(c.toDataURL()); if(undoStack.length>30)undoStack.shift();redoStack.length=0}
 function undo(){if(undoStack.length<2)return;redoStack.push(undoStack.pop());restore(undoStack.at(-1))}
 function redo(){if(!redoStack.length)return;const d=redoStack.pop();undoStack.push(d);restore(d)}
-function restore(s){const i=new Image();i.onload=()=>{scale=1;tx=ty=0;ctx.resetTransform();ctx.drawImage(i,0,0);apply()};i.src=s}
-function save(){saved.push(canvas.toDataURL());localStorage.setItem(STORAGE_KEY,JSON.stringify(saved));alert('Saved!')}
-function download(){const a=document.createElement('a');a.href=canvas.toDataURL();a.download='coloring.png';a.click()}
+function restore(s){let i=new Image();i.onload=()=>{scale=1;tx=ty=0;ctx.drawImage(i,0,0);apply()};i.src=s}
+function save(){saved.push(c.toDataURL());localStorage.setItem(STORAGE_KEY,JSON.stringify(saved));alert('Saved!')}
+function download(){const a=document.createElement('a');a.href=c.toDataURL();a.download='coloring.png';a.click()}
 function clearCanvas(){drawImageScaled();push()}
 
 init();
 </script>
-</body>
-</html>
+</body></html>
