@@ -6,75 +6,60 @@
 <title>Coloring Book App</title>
 <style>
   html, body {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    overflow: hidden; /* disable global scroll */
-    touch-action: none;
-    font-family: 'Comic Sans MS';
-    background: #fff6e0;
+    margin: 0; padding: 0; height: 100%; overflow: hidden;
+    font-family: 'Comic Sans MS'; background: #fff6e0; touch-action: none;
   }
   #home,#library,#pageSelect,#drawing {
-    display: none;
-    flex-direction: column;
-    width: 100%;
-    height: 100%;
+    display: none; flex-direction: column; width: 100%; height: 100%;
   }
-  #home { display:flex; align-items:center; justify-content:center; background: linear-gradient(to bottom right, #ffdee9, #b5fffc); }
-  .home-btn { margin:20px; border:none; background:none; cursor:pointer; }
-  .home-btn img { width:180px; }
+  #home {
+    display: flex; justify-content: center; align-items: center;
+    background: linear-gradient(to bottom right, #ffdee9, #b5fffc);
+  }
+  .home-btn {
+    margin: 20px; border: none; background: none; cursor: pointer;
+  }
+  .home-btn img {
+    width: 180px;
+  }
   #library, #pageSelect {
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto; /* vertical scroll */
-    align-items: center;
-    padding: 10px 0;
+    display: flex; flex-direction: column;
+    overflow-y: auto; align-items: center; padding: 10px;
     box-sizing: border-box;
   }
   #pageSelect img, #library img {
-    width:150px;
-    margin:10px;
-    border:3px solid #f06292;
-    border-radius:10px;
-    cursor:pointer;
-    flex-shrink:0;
+    width: 150px; margin: 10px; border: 3px solid #f06292;
+    border-radius: 10px; cursor: pointer;
   }
-  #top-bar, #bottom-bar {
-    display: flex;
-    align-items: center;
-    overflow-x: auto;
-    gap: 10px;
-    background: #ffe0f0;
-    padding: 10px;
-    flex-shrink:0;
-    -webkit-overflow-scrolling: touch;
+  #top-bar {
+    display: flex; align-items: center; gap: 10px;
+    background: #ffe0f0; padding: 10px; flex-shrink: 0;
+  }
+  #bottom-bar {
+    display: flex; align-items: center; gap: 10px;
+    overflow-x: auto; background: #ffe0f0; padding: 10px;
+    flex-shrink: 0; -webkit-overflow-scrolling: touch;
   }
   button, .tool, .color {
-    padding: 8px;
-    font-size: 18px;
-    border:none;
-    border-radius:10px;
-    cursor:pointer;
-    background:#f06292;
-    color:white;
-    box-shadow:2px 2px 6px rgba(0,0,0,0.2);
-    flex-shrink:0;
+    padding: 8px; font-size: 18px; border: none;
+    border-radius: 10px; cursor: pointer;
+    background: #f06292; color: white;
+    box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
+    flex-shrink: 0;
   }
-  .tool, .color { width:40px; height:40px; display:flex; align-items:center; justify-content:center; }
-  .color { border:2px solid #f06292; }
-  .active { border:3px solid #ff4081 !important; }
+  .tool, .color {
+    width: 40px; height: 40px;
+    display: flex; justify-content: center; align-items: center;
+  }
+  .color { border: 2px solid #f06292; }
+  .active { border: 3px solid #ff4081 !important; }
   #canvas-container {
-    flex:1;
-    position:relative;
-    overflow:hidden;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    background:#fff;
+    flex: 1; position: relative; overflow: hidden;
+    display: flex; justify-content: center; align-items: center;
+    background: #fff;
   }
   canvas {
-    touch-action: none;
-    border-radius:10px;
+    touch-action: none; border-radius: 10px;
     transform-origin: 0 0;
   }
 </style>
@@ -82,8 +67,12 @@
 <body>
 
 <div id="home">
-  <button class="home-btn" onclick="showLibrary()"><img src="https://img.icons8.com/clouds/200/000000/opened-folder.png"/></button>
-  <button class="home-btn" onclick="showPageSelect()"><img src="https://img.icons8.com/clouds/200/000000/paint-palette.png"/></button>
+  <button class="home-btn" onclick="showLibrary()">
+    <img src="https://img.icons8.com/clouds/200/000000/opened-folder.png"/>
+  </button>
+  <button class="home-btn" onclick="showPageSelect()">
+    <img src="https://img.icons8.com/clouds/200/000000/paint-palette.png"/>
+  </button>
 </div>
 
 <div id="library">
@@ -114,22 +103,20 @@
   </div>
 </div>
 
-<audio id="clickSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_059f6bff69.mp3?filename=click-124467.mp3"></audio>
+<audio id="clickSound"
+       src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_059f6bff69.mp3?filename=click-124467.mp3">
+</audio>
 
 <script>
-  // STORAGE
   const STORAGE_KEY = 'myColoringLibrary';
   let savedImages = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-
-  // ELEMENTS & STATE
-  const canvas = document.getElementById('drawCanvas'), ctx = canvas.getContext('2d');
-  const img = new Image(); img.crossOrigin = 'anonymous';
+  const canvas = document.getElementById('drawCanvas'),
+        ctx = canvas.getContext('2d'),
+        img = new Image(); img.crossOrigin = 'anonymous';
   const clickSound = document.getElementById('clickSound');
-  let tool = 'bucket', color = 'black';
-  let scale = 1, tx = 0, ty = 0, isDragging = false, startDrag = null, lastDist = null;
-  const undoStack = [], redoStack = [];
-
-  // COLOR LIST & PAGE LIST
+  let tool='bucket', color='black', scale=1, tx=0, ty=0,
+      isDragging=false, startDrag=null, lastDist=null;
+  const undoStack=[], redoStack=[];
   const colorList = ['black','gray','red','orange','yellow','green','blue','purple','pink','peach','tan','brown','white','cyan','magenta','navy','#f4c2c2','#FFDAB9','#E6E6FA','#FFFACD','#FAFAD2','#FFE4E1'];
   const drawings = [
     'https://i.postimg.cc/TPZTn08W/0f00c43f3775ba5fcce443f4885aa56e.jpg',
@@ -150,7 +137,6 @@
   'https://i.postimg.cc/tTxCcfd5/Barbie-6.jpg'
   ];
 
-  // INIT
   function init(){
     setupPalette();
     buildPageSelect();
@@ -161,8 +147,7 @@
     const bar = document.getElementById('bottom-bar');
     colorList.forEach(c => {
       const d = document.createElement('div');
-      d.className = 'color';
-      d.style.background = c;
+      d.className='color'; d.style.background=c;
       d.onclick = () => { clickSound.play(); color=c; updateUI(); };
       bar.appendChild(d);
     });
@@ -183,13 +168,18 @@
   }
 
   function updateUI(){
-    document.querySelectorAll('.tool').forEach(el => el.classList.toggle('active', el.dataset.tool===tool));
-    document.querySelectorAll('.color').forEach(el => el.classList.toggle('active', el.style.background===color));
+    document.querySelectorAll('.tool').forEach(el =>
+      el.classList.toggle('active', el.dataset.tool===tool)
+    );
+    document.querySelectorAll('.color').forEach(el =>
+      el.classList.toggle('active', el.style.background===color)
+    );
   }
 
-  // PAGES
   function hideAll(){
-    ['home','library','pageSelect','drawing'].forEach(id => document.getElementById(id).style.display='none');
+    ['home','library','pageSelect','drawing'].forEach(id =>
+      document.getElementById(id).style.display='none'
+    );
   }
   function showHome(){ hideAll(); document.getElementById('home').style.display='flex'; }
   function showLibrary(){
@@ -197,59 +187,66 @@
     const lib = document.getElementById('library');
     lib.innerHTML = '<h2>Library</h2>';
     savedImages.forEach(src => {
-      const im = document.createElement('img'); im.src = src;
+      const im = document.createElement('img');
+      im.src = src;
       lib.appendChild(im);
     });
     const btn = document.createElement('button');
-    btn.textContent = '⬅ Back'; btn.onclick = showHome;
+    btn.textContent='⬅ Back'; btn.onclick=showHome;
     lib.appendChild(btn);
-    lib.style.display = 'flex';
+    lib.style.display='flex';
   }
   function showPageSelect(){ hideAll(); document.getElementById('pageSelect').style.display='flex'; }
   function loadPage(i){
     hideAll(); document.getElementById('drawing').style.display='flex';
     img.onload = () => { resetTransform(); drawImageScaled(); pushUndo(); };
-    img.src = drawings[i] + '?v=' + Date.now();
+    img.src = drawings[i]+'?v='+Date.now();
   }
 
-  // TRANSFORM & PAINT
-  canvas.addEventListener('mousedown', e => { isDragging=true; startDrag={x:e.clientX,y:e.clientY}; });
+  canvas.addEventListener('mousedown', e => {
+    isDragging=true; startDrag={x:e.clientX,y:e.clientY};
+  });
   canvas.addEventListener('mousemove', e => {
-    if (!isDragging) return;
+    if(!isDragging) return;
     tx += e.clientX - startDrag.x; ty += e.clientY - startDrag.y;
-    startDrag = {x:e.clientX, y:e.clientY};
+    startDrag={x:e.clientX,y:e.clientY};
     applyTransform();
   });
-  canvas.addEventListener('mouseup', () => isDragging=false);
-  canvas.addEventListener('mouseleave', () => isDragging=false);
+  canvas.addEventListener('mouseup', ()=>isDragging=false);
+  canvas.addEventListener('mouseleave', ()=>isDragging=false);
   canvas.addEventListener('click', paintAt);
 
   canvas.addEventListener('touchstart', e => {
-    if (e.touches.length==1) { isDragging=true; startDrag={x:e.touches[0].clientX, y:e.touches[0].clientY}; }
-    if (e.touches.length==2) pinchZoom(e);
+    if(e.touches.length===1){
+      isDragging=true;
+      startDrag={x:e.touches[0].clientX,y:e.touches[0].clientY};
+    }
+    if(e.touches.length===2) pinchZoom(e);
   });
   canvas.addEventListener('touchmove', e => {
     e.preventDefault();
-    if (e.touches.length==1 && isDragging) {
+    if(e.touches.length===1 && isDragging){
       tx += e.touches[0].clientX - startDrag.x;
       ty += e.touches[0].clientY - startDrag.y;
-      startDrag={x:e.touches[0].clientX, y:e.touches[0].clientY};
+      startDrag={x:e.touches[0].clientX,y:e.touches[0].clientY};
       applyTransform();
     }
-    if (e.touches.length==2) pinchZoom(e);
+    if(e.touches.length===2) pinchZoom(e);
   }, { passive: false });
-  canvas.addEventListener('touchend', () => { isDragging=false; lastDist=null; });
+  canvas.addEventListener('touchend', ()=>{isDragging=false; lastDist=null;});
 
   function pinchZoom(e){
     const dx = e.touches[0].clientX - e.touches[1].clientX;
     const dy = e.touches[0].clientY - e.touches[1].clientY;
-    const dist = Math.hypot(dx, dy);
-    if (lastDist){
+    const dist = Math.hypot(dx,dy);
+    if(lastDist){
       const factor = dist / lastDist;
       const mx = (e.touches[0].clientX + e.touches[1].clientX)/2;
       const my = (e.touches[0].clientY + e.touches[1].clientY)/2;
-      const beforeX = (mx - tx) / scale;
-      const beforeY = (my - ty) / scale;
+
+      const beforeX = (mx - tx)/scale;
+      const beforeY = (my - ty)/scale;
+
       scale = Math.min(3, Math.max(0.3, scale * factor));
       tx = mx - beforeX * scale;
       ty = my - beforeY * scale;
@@ -263,7 +260,7 @@
   }
 
   function getXY(e){
-    const r = canvas.getBoundingClientRect();
+    const r=canvas.getBoundingClientRect();
     const ex = e.clientX || (e.touches && e.touches[0].clientX);
     const ey = e.clientY || (e.touches && e.touches[0].clientY);
     return {
@@ -273,32 +270,30 @@
   }
 
   function paintAt(e){
-    if (!img.src) return;
+    if(!img.src) return;
     const {x,y} = getXY(e);
     clickSound.play();
-    if (tool === 'bucket'){
-      const data = ctx.getImageData(0,0,canvas.width,canvas.height);
+    if(tool==='bucket'){
+      const data=ctx.getImageData(0,0,canvas.width,canvas.height);
       floodfill(data.data, x,y, hexToRGBA(color), 25, data.width, data.height);
-      ctx.putImageData(data, 0,0);
+      ctx.putImageData(data,0,0);
     } else {
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.beginPath();
-      ctx.arc(x,y,10,0,2*Math.PI);
-      ctx.fill();
-      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalCompositeOperation='destination-out';
+      ctx.beginPath(); ctx.arc(x,y,10,0,2*Math.PI); ctx.fill();
+      ctx.globalCompositeOperation='source-over';
     }
     pushUndo();
   }
 
-  function floodfill(data, sx,sy, fill, tol, w,h){
-    const start = (sy*w+sx)*4;
-    const base = data.slice(start, start+4);
-    const match = px => px.every((v,i) => Math.abs(v-base[i])<tol);
+  function floodfill(data,sx,sy,fill,tol,w,h){
+    const start =(sy*w+sx)*4;
+    const base = data.slice(start,start+4);
+    const match = px=>px.every((v,i)=>Math.abs(v-base[i])<tol);
     const stack=[{x:sx,y:sy}];
     const visited=new Uint8Array(w*h);
     while(stack.length){
-      const p = stack.pop(), idx = (p.y*w+p.x)*4;
-      if (p.x<0||p.x>=w||p.y<0||p.y>=h||visited[p.y*w+p.x]||!match(data.slice(idx,idx+4))) continue;
+      const p=stack.pop(),idx=(p.y*w+p.x)*4;
+      if(p.x<0||p.x>=w||p.y<0||p.y>=h||visited[p.y*w+p.x]||!match(data.slice(idx,idx+4))) continue;
       visited[p.y*w+p.x]=1;
       data[idx]=fill.r; data[idx+1]=fill.g; data[idx+2]=fill.b; data[idx+3]=fill.a;
       stack.push({x:p.x+1,y:p.y},{x:p.x-1,y:p.y},{x:p.x,y:p.y+1},{x:p.x,y:p.y-1});
@@ -306,48 +301,41 @@
   }
 
   function hexToRGBA(hex){
-    const tmp = document.createElement('div');
-    tmp.style.color = hex;
-    document.body.appendChild(tmp);
-    const [r,g,b] = getComputedStyle(tmp).color.match(/\d+/g).map(Number);
+    const tmp=document.createElement('div'); tmp.style.color=hex; document.body.appendChild(tmp);
+    const [r,g,b]=getComputedStyle(tmp).color.match(/\d+/g).map(Number);
     document.body.removeChild(tmp);
     return {r,g,b,a:255};
   }
 
-  // DRAW & TRANSFORM
   function resetTransform(){ scale=1; tx=0; ty=0; applyTransform(); }
   function drawImageScaled(){
-    const cw = canvas.width, ch = canvas.height;
-    const iw = img.width, ih = img.height;
-    const ratio = Math.min(cw/iw, ch/ih);
-    const x = (cw - iw*ratio)/2, y = (ch - ih*ratio)/2;
+    const cw=canvas.width, ch=canvas.height, iw=img.width, ih=img.height;
+    const ratio=Math.min(cw/iw, ch/ih),
+          x=(cw-iw*ratio)/2, y=(ch-ih*ratio)/2;
     ctx.clearRect(0,0,cw,ch);
     ctx.drawImage(img,0,0,iw,ih,x,y,iw*ratio,ih*ratio);
   }
 
-  // HISTORY & LIBRARY
   function pushUndo(){
     undoStack.push(canvas.toDataURL());
-    if (undoStack.length > 30) undoStack.shift();
-    redoStack.length = 0;
+    if(undoStack.length>30) undoStack.shift();
+    redoStack.length=0;
   }
-  function undo(){ if (undoStack.length<2) return; redoStack.push(undoStack.pop()); restore(undoStack.at(-1)); }
-  function redo(){ if (!redoStack.length) return; const d=redoStack.pop(); undoStack.push(d); restore(d); }
+  function undo(){ if(undoStack.length<2) return; redoStack.push(undoStack.pop()); restore(undoStack.at(-1)); }
+  function redo(){ if(!redoStack.length) return; const d=redoStack.pop(); undoStack.push(d); restore(d); }
   function restore(src){
-    const i = new Image();
-    i.onload = ()=> { resetTransform(); ctx.drawImage(i,0,0); };
-    i.src = src;
+    const i=new Image(); i.onload=()=>{ resetTransform(); ctx.drawImage(i,0,0); }; i.src=src;
   }
   function save(){
-    const data = canvas.toDataURL();
-    savedImages.push(data);
+    const d = canvas.toDataURL();
+    savedImages.push(d);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(savedImages));
     alert('Saved to Library!');
   }
   function download(){
-    const a = document.createElement('a');
-    a.href = canvas.toDataURL();
-    a.download = 'coloring.png';
+    const a=document.createElement('a');
+    a.href=canvas.toDataURL();
+    a.download='coloring.png';
     a.click();
   }
   function clearCanvas(){ drawImageScaled(); pushUndo(); }
