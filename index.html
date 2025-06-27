@@ -4,101 +4,90 @@
   <meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Coloring App</title>
   <style>
-    html, body { margin:0; padding:0; height:100%; overflow:hidden; touch-action:none;
-      font-family:Comic Sans MS; background:#fff6e0; }
-    #home, #library, #pageSelect, #drawing {
+    html,body {margin:0;padding:0;height:100%;overflow:hidden;font-family:Comic Sans MS;background:#fff6e0}
+    #home,#library,#pageSelect,#drawing {
       display:none; flex-direction:column; width:100%; height:100%;
     }
     #home {
       display:flex; justify-content:space-around; align-items:center;
-      padding:20px; background:linear-gradient(to bottom right,#ffdee9,#b5fffc);
+      padding:20px; background:linear-gradient(to bottom,#ffdee9,#b5fffc);
     }
-    .home-btn { width:160px; text-align:center; }
-    .home-btn img { width:100%; display:block; margin-bottom:6px; }
-    .home-btn div { font-weight:bold; }
-    #library h2, #pageSelect h2 {
-      font-size:24px; font-weight:bold; padding:8px; text-align:center;
+    .home-btn {width:160px;text-align:center;cursor:pointer}
+    .home-btn img {width:100%;margin-bottom:6px}
+    .home-btn div {font-weight:bold}
+    #pageSelect h2,#library h2 {
+      font-size:24px;padding:10px;text-align:center;
     }
-    #library, #pageSelect {
-      flex:1; overflow:auto; align-items:center; padding:10px;
+    #pageSelect,#library {
+      display:none;flex-direction:column;height:100%;
     }
-    #library img, #pageSelect img {
-      width:150px; margin:10px; border:3px solid #f06292;
-      border-radius:10px; cursor:pointer;
+    #pages,#savedImgs {
+      flex:1;overflow:auto;display:flex;flex-wrap:wrap;justify-content:center;
     }
-    .thumb-container { position:relative; display:inline-block; margin:10px; }
+    #pages img,#savedImgs img {
+      width:150px;margin:10px;border:3px solid #f06292;border-radius:10px;cursor:pointer;
+    }
+    .thumb-container {
+      position:relative;display:inline-block;margin:10px;
+    }
     .delete-btn {
-      position:absolute; top:4px; right:4px; padding:2px 6px;
-      font-size:12px; background:red; color:white;
-      border:none; border-radius:4px; cursor:pointer;
+      position:absolute;top:4px;right:4px;background:red;color:white;
+      border:none;border-radius:4px;padding:2px 6px;cursor:pointer;
     }
+    #libBack,#backBtn {
+      padding:6px;font-size:16px;margin:10px;cursor:pointer;
+    }
+    /* Drawing screen styles */
     #drawing {
-      display:flex; flex-direction:column; height:100%;
-      position:relative;
-    }
-    #backBtn {
-      position:absolute; top:10px; left:10px;
-      padding:6px; font-size:16px; z-index:10;
+      display:none;flex-direction:column;height:100%;position:relative;
     }
     #top-bar {
-      display:flex; flex-wrap:wrap; gap:8px;
-      padding:8px; background:#ffe0f0;
-      justify-content:center;
+      display:flex;gap:8px;padding:8px;background:#ffe0f0;
+      flex-wrap:wrap;justify-content:center;
     }
     #canvas-container {
-      flex:1; position:relative; overflow:hidden;
-      background:#fff;
+      flex:1;overflow:hidden;background:#fff;border-top:2px solid #ccc;
     }
     canvas {
-      display:block; touch-action:none; border-radius:10px;
+      width:100%;height:100%;border-radius:10px;touch-action:none;
     }
     #bottom-bar {
-      display:flex; gap:8px; overflow-x:auto;
-      background:#ffe0f0; padding:8px;
-      border-top:2px solid #ccc;
-      box-shadow: inset 0 5px 5px -5px rgba(0,0,0,0.3);
+      display:flex;gap:8px;overflow-x:auto;padding:8px;background:#ffe0f0;
     }
-    button, .tool, .color {
-      padding:6px; font-size:16px; border:none;
-      border-radius:10px; cursor:pointer;
-      background:#f06292; color:#fff;
+    .tool,.color,button {
+      padding:6px;font-size:16px;border:none;border-radius:10px;
+      cursor:pointer;background:#f06292;color:#fff;
       box-shadow:2px 2px 6px rgba(0,0,0,0.2);
-      flex-shrink:0;
     }
-    .tool, .color {
-      width:36px; height:36px;
-      display:flex; align-items:center; justify-content:center;
+    .tool,.color {
+      width:36px;height:36px;display:flex;align-items:center;justify-content:center;
     }
-    .color { border:3px solid #333; }
-    .active { border:3px solid #ff4081!important; }
-    #libBack {
-      padding:6px; font-size:16px;
-      margin:10px; align-self:flex-start;
-    }
+    .color {border:3px solid #333}
+    .active {border:3px solid #ff4081!important}
   </style>
 </head>
 <body>
 
 <div id="home">
-  <button class="home-btn" onclick="showPageSelect()">
+  <div class="home-btn" onclick="showPageSelect()">
     <img src="https://img.icons8.com/clouds/200/000000/paint-palette.png"/>
     <div>Coloring Book</div>
-  </button>
-  <button class="home-btn" onclick="showLibrary()">
+  </div>
+  <div class="home-btn" onclick="showLibrary()">
     <img src="https://img.icons8.com/clouds/200/000000/opened-folder.png"/>
     <div>My Album</div>
-  </button>
+  </div>
 </div>
 
 <div id="pageSelect">
   <h2>Coloring Book</h2>
-  <div id="pages" style="display:flex;flex-wrap:wrap;justify-content:center"></div>
+  <div id="pages"></div>
 </div>
 
 <div id="library">
-  <h2>My Album</h2>
-  <div id="savedImgs" style="display:flex;flex-wrap:wrap;justify-content:center"></div>
   <button id="libBack" onclick="showHome()">⬅ Back</button>
+  <h2>My Album</h2>
+  <div id="savedImgs"></div>
 </div>
 
 <div id="drawing">
@@ -110,9 +99,7 @@
     <button onclick="download()">⬇ Download</button>
     <button onclick="clearCanvas()">🗑 Clear</button>
   </div>
-  <div id="canvas-container">
-    <canvas id="canvas"></canvas>
-  </div>
+  <div id="canvas-container"><canvas id="canvas"></canvas></div>
   <div id="bottom-bar">
     <div class="tool" data-tool="bucket">🪣</div>
     <div class="tool" data-tool="eraser">🧽</div>
@@ -122,26 +109,20 @@
 <audio id="clickSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_059f6bff69.mp3?filename=click-124467.mp3"></audio>
 
 <script>
-const STORAGE_KEY = 'myColorLib';
-let saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+const STORAGE_KEY='myColorLib';
+let saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+const canvas=document.getElementById('canvas'), ctx=canvas.getContext('2d');
+const img=new Image(); img.crossOrigin='anonymous';
+const clickSound=document.getElementById('clickSound');
 
-const canvas = document.getElementById('canvas'),
-      ctx = canvas.getContext('2d'),
-      img = new Image();
-img.crossOrigin = 'anonymous';
-
-const clickSound = document.getElementById('clickSound');
-
-let tool='bucket', color='black', scale=1, tx=0, ty=0;
-let isDrag=false, start=null, lastDist=null;
-const undoStack=[], redoStack=[];
-
-const colors = ['black','gray','brown','red','orange','yellow','green','dark green','indigo','blue','light blue','purple','violet','pink','peach','tan','white','cyan','magenta','navy','#8B0000','#00CED1','#ADFF2F','#FF1493','#800080','#FFD700','#00FF7F','#DC143C'];
-const drawings = [
+let tool='bucket', color='black';
+let undoStack=[], redoStack=[];
+const colors=['black','gray','red','orange','yellow','green','blue','purple','pink','peach','tan','brown','skin','white','cyan','magenta','navy','#8B0000','#00CED1','#ADFF2F','#FF1493'];
+const drawings=[
   'https://i.postimg.cc/TPZTn08W/0f00c43f3775ba5fcce443f4885aa56e.jpg',
   'https://i.postimg.cc/JnZMxXmY/bunny-carrot-coloring-page-600nw-2414476443.jpg',
   'https://i.postimg.cc/Bv8q8yz0/36-girl-with-butterfly-wings-to-color.jpg',
-   'https://i.postimg.cc/TPZTn08W/0f00c43f3775ba5fcce443f4885aa56e.jpg',
+  'https://i.postimg.cc/TPZTn08W/0f00c43f3775ba5fcce443f4885aa56e.jpg',
   'https://i.postimg.cc/JnZMxXmY/bunny-carrot-coloring-page-600nw-2414476443.jpg',
   'https://i.postimg.cc/Bv8q8yz0/36-girl-with-butterfly-wings-to-color.jpg',
   'https://i.postimg.cc/Bv8q8yz0/36-girl-with-butterfly-wings-to-color.jpg',
@@ -153,205 +134,95 @@ const drawings = [
   'https://i.postimg.cc/FsDmTN5v/Barbie-24.jpg',
   'https://i.postimg.cc/FsDmTN5v/Barbie-24.jpg',
   'https://i.postimg.cc/j2YdYXZr/Barbie-27.jpg',
-  'https://i.postimg.cc/tTxCcfd5/Barbie-6.jpg'             
+  'https://i.postimg.cc/tTxCcfd5/Barbie-6.jpg'
 ];
 
+window.addEventListener('resize',()=> canvas._loaded && initCanvas());
+
 function init(){
-  const pages = document.getElementById('pages');
+  const pagesDiv=document.getElementById('pages');
   drawings.forEach((src,i)=>{
-    let im = document.createElement('img');
-    im.src = src;
-    im.onclick = ()=> loadPage(i);
-    pages.appendChild(im);
+    const im=new Image(); im.src=src;
+    im.onclick=()=>loadPage(i);
+    pagesDiv.appendChild(im);
   });
-
   renderLibrary();
-
-  const bottom = document.getElementById('bottom-bar');
+  const bottom=document.getElementById('bottom-bar');
   colors.forEach(c=>{
-    let div = document.createElement('div');
-    div.className = 'color';
-    div.style.background = c;
-    div.onclick = ()=>{ color=c; updateUI(); clickSound.currentTime=0; clickSound.play(); };
-    bottom.appendChild(div);
+    const d=document.createElement('div'); d.className='color'; d.style.background=c;
+    d.onclick=()=>{color=c;updateUI();clickSound.currentTime=0;clickSound.play()};
+    bottom.appendChild(d);
   });
-
   document.querySelectorAll('.tool').forEach(t=>{
-    t.onclick = ()=>{
-      tool = t.dataset.tool;
-      updateUI();
-      clickSound.currentTime=0;
-      clickSound.play();
-    };
+    t.onclick=()=>{tool=t.dataset.tool; updateUI(); clickSound.currentTime=0; clickSound.play()};
   });
-
   updateUI();
-  window.addEventListener('resize', resizeCanvas);
   showHome();
 }
 
+function updateUI(){
+  document.querySelectorAll('.tool').forEach(el=> el.classList.toggle('active', el.dataset.tool===tool));
+  document.querySelectorAll('.color').forEach(el=> el.classList.toggle('active', el.style.background===color));
+}
+
 function renderLibrary(){
-  const div = document.getElementById('savedImgs');
-  div.innerHTML = '';
+  const div=document.getElementById('savedImgs');
+  div.innerHTML='';
   saved.forEach((src,i)=>{
-    const cont = document.createElement('div');
-    cont.className = 'thumb-container';
-    const im = document.createElement('img');
-    im.src = src;
-    const del = document.createElement('button');
-    del.className = 'delete-btn';
-    del.textContent = 'X';
-    del.onclick = ()=>{
+    const cont=document.createElement('div'); cont.className='thumb-container';
+    const im=new Image(); im.src=src;
+    const del=document.createElement('button'); del.className='delete-btn'; del.textContent='X';
+    del.onclick=()=>{
       saved.splice(i,1);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+      localStorage.setItem(STORAGE_KEY,JSON.stringify(saved));
       renderLibrary();
     };
-    cont.appendChild(im);
-    cont.appendChild(del);
+    cont.appendChild(im); cont.appendChild(del);
     div.appendChild(cont);
   });
 }
 
-function hideAll(){
-  ['home','drawing','library','pageSelect'].forEach(id=>
-    document.getElementById(id).style.display='none'
-  );
-}
+function hideAll(){ ['home','pageSelect','library','drawing'].forEach(id=>document.getElementById(id).style.display='none'); }
 function showHome(){ hideAll(); document.getElementById('home').style.display='flex'; }
-function showLibrary(){ hideAll(); renderLibrary(); document.getElementById('library').style.display='flex'; }
 function showPageSelect(){ hideAll(); document.getElementById('pageSelect').style.display='flex'; }
+function showLibrary(){ hideAll(); renderLibrary(); document.getElementById('library').style.display='flex'; }
 
 function loadPage(i){
-  hideAll();
-  document.getElementById('drawing').style.display='flex';
-  img.onload = ()=>{
-    resizeCanvas();
-    resetTransform();
-    drawImageScaled();
-    push();
-  };
-  img.src = drawings[i] + '?v=' + Date.now();
+  hideAll(); document.getElementById('drawing').style.display='flex';
+  img.onload=initCanvas;
+  img.src=drawings[i]+'?v='+Date.now();
 }
 
-function resizeCanvas(){
-  const r = document.getElementById('canvas-container').getBoundingClientRect();
-  canvas.width = r.width;
-  canvas.height = r.height;
+function initCanvas(){
+  canvas._loaded=true;
+  const r=document.getElementById('canvas-container').getBoundingClientRect();
+  canvas.width=r.width; canvas.height=r.height;
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.drawImage(img,0,0,canvas.width,canvas.height);
+  undoStack=[]; redoStack=[]; push();
 }
 
-function resetTransform(){
-  scale=1; tx=0; ty=0;
-  canvas.style.transform = '';
-}
-
-function updateUI(){
-  document.querySelectorAll('.tool').forEach(el=>
-    el.classList.toggle('active', el.dataset.tool===tool)
-  );
-  document.querySelectorAll('.color').forEach(el=>
-    el.classList.toggle('active', el.style.background===color)
-  );
-}
-
-// Zoom & pan events
-canvas.addEventListener('mousedown', e=>{
-  isDrag = true; start = { x:e.clientX, y:e.clientY };
-});
-canvas.addEventListener('mousemove', e=>{
-  if(isDrag){
-    tx += e.clientX - start.x;
-    ty += e.clientY - start.y;
-    start = { x:e.clientX, y:e.clientY };
-    applyTransform();
-  }
-});
-canvas.addEventListener('mouseup', ()=> isDrag=false);
-canvas.addEventListener('mouseleave', ()=> isDrag=false);
-
-canvas.addEventListener('touchstart', e=>{
-  if(e.touches.length===1){
-    isDrag = true;
-    start = { x:e.touches[0].clientX, y:e.touches[0].clientY };
-  } else if(e.touches.length===2){
-    lastDist = getDist(e);
-    start = getMid(e);
-  }
-}, { passive: false });
-
-canvas.addEventListener('touchmove', e=>{
-  e.preventDefault();
-  if(e.touches.length===1 && isDrag){
-    tx += e.touches[0].clientX - start.x;
-    ty += e.touches[0].clientY - start.y;
-    start = { x:e.touches[0].clientX, y:e.touches[0].clientY };
-    applyTransform();
-  } else if(e.touches.length===2){
-    const nd = getDist(e), m = getMid(e);
-    let f = 1 + ((nd / lastDist) - 1) / 10;
-    const bx = (m.x - tx) / scale;
-    const by = (m.y - ty) / scale;
-    scale *= f; tx = m.x - bx * scale; ty = m.y - by * scale;
-    lastDist = nd;
-    applyTransform();
-  }
-}, { passive: false });
-
-canvas.addEventListener('touchend', ()=>{
-  isDrag = false;
-  if((event.touches || []).length < 2) lastDist = null;
-});
-
-function getDist(e){
-  return Math.hypot(
-    e.touches[0].clientX - e.touches[1].clientX,
-    e.touches[0].clientY - e.touches[1].clientY
-  );
-}
-
-function getMid(e){
-  return {
-    x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
-    y: (e.touches[0].clientY + e.touches[1].clientY) / 2
-  };
-}
-
-function applyTransform(){
-  canvas.style.transform = `translate(${tx}px,${ty}px) scale(${scale})`;
-  canvas.style.transformOrigin = '0 0';
-}
-
-// Converts screen pointer to canvas pixel using inverted CSS transform
-function screenToCanvas(e){
-  const rect = canvas.getBoundingClientRect();
-  const style = getComputedStyle(canvas);
-  const matrix = new DOMMatrixReadOnly(style.transform);
-  const inv = matrix.inverse();
-  const sx = e.clientX - rect.left;
-  const sy = e.clientY - rect.top;
-  const pt = inv.transformPoint({ x: sx, y: sy });
-  return pt;
-}
-
-canvas.addEventListener('click', e=>{
-  if(!img.src) return;
-  const pt = screenToCanvas(e);
-  const x = Math.floor(pt.x), y = Math.floor(pt.y);
+canvas.addEventListener('click',e=>{
+  if(!canvas._loaded) return;
+  const xOffset=e.offsetX, yOffset=e.offsetY;
+  const cx=Math.floor(xOffset*canvas.width/canvas.clientWidth);
+  const cy=Math.floor(yOffset*canvas.height/canvas.clientHeight);
   clickSound.currentTime=0; clickSound.play();
-  const id = ctx.getImageData(0,0,canvas.width,canvas.height), d = id.data;
-  const bg = { r:255, g:246, b:224, a:255 };
-  if(tool==='bucket') flood(d, x, y, hexToRGBA(color), 25, canvas.width, canvas.height);
-  else flood(d, x, y, bg, 25, canvas.width, canvas.height);
-  ctx.putImageData(id, 0, 0);
-  push();
+  const id=ctx.getImageData(0,0,canvas.width,canvas.height), d=id.data;
+  const bg={r:255,g:246,b:224,a:255};
+  tool==='bucket'
+    ? flood(d,cx,cy,hexToRGBA(color),25,canvas.width,canvas.height)
+    : flood(d,cx,cy,bg,25,canvas.width,canvas.height);
+  ctx.putImageData(id,0,0); push();
 });
 
 function flood(data,x,y,c,t,w,h){
-  const startI=(y*w+x)*4, base=data.slice(startI,startI+4);
+  const si=(y*w+x)*4, base=data.slice(si,si+4);
   const match=px=>px.every((v,i)=>Math.abs(v-base[i])<t);
-  const stack=[{x,y}];
-  const vis=new Uint8Array(w*h);
+  const stack=[{x,y}], vis=new Uint8Array(w*h);
   while(stack.length){
-    const p = stack.pop(), i=(p.y*w+p.x)*4;
+    const p=stack.pop(),i=(p.y*w+p.x)*4;
     if(p.x<0||p.x>=w||p.y<0||p.y>=h||vis[p.y*w+p.x]||!match(data.slice(i,i+4))) continue;
     vis[p.y*w+p.x]=1;
     data[i]=c.r; data[i+1]=c.g; data[i+2]=c.b; data[i+3]=c.a;
@@ -360,71 +231,42 @@ function flood(data,x,y,c,t,w,h){
 }
 
 function hexToRGBA(hex){
-  const tmp = document.createElement('div');
-  tmp.style.color = hex;
-  document.body.appendChild(tmp);
-  const [r,g,b] = getComputedStyle(tmp).color.match(/\d+/g).map(Number);
-  document.body.removeChild(tmp);
-  return { r, g, b, a:255 };
-}
-
-function drawImageScaled(){
-  const cw=canvas.width, ch=canvas.height;
-  const iw=img.width, ih=img.height;
-  const r = Math.min(cw/iw, ch/ih);
-  const x = (cw - iw*r)/2;
-  const y = (ch - ih*r)/2;
-  ctx.setTransform(1,0,0,1,0,0);
-  ctx.clearRect(0,0,cw,ch);
-  ctx.drawImage(img, 0,0,iw,ih, x,y, iw*r, ih*r);
+  const tmp=document.createElement('div'); tmp.style.color=hex; document.body.appendChild(tmp);
+  const [r,g,b]=getComputedStyle(tmp).color.match(/\d+/g).map(Number); tmp.remove();
+  return {r,g,b,a:255};
 }
 
 function push(){
   undoStack.push(canvas.toDataURL());
   if(undoStack.length>30) undoStack.shift();
-  redoStack.length=0;
+  redoStack=[];
 }
-
 function undo(){
   if(undoStack.length<2) return;
   redoStack.push(undoStack.pop());
   restore(undoStack.at(-1));
 }
-
 function redo(){
   if(!redoStack.length) return;
-  const d = redoStack.pop();
+  const d=redoStack.pop();
   undoStack.push(d);
   restore(d);
 }
-
 function restore(src){
-  const i = new Image();
-  i.onload = ()=>{
-    ctx.drawImage(i,0,0);
-    resetTransform();
-    applyTransform();
-  };
-  i.src = src;
+  const i=new Image(); i.onload=initCanvas; i.src=src;
 }
 
 function save(){
   saved.push(canvas.toDataURL());
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(saved));
   renderLibrary();
   alert('Saved!');
 }
-
 function download(){
-  const a = document.createElement('a');
-  a.href = canvas.toDataURL();
-  a.download = 'coloring.png';
-  a.click();
+  const a=document.createElement('a'); a.href=canvas.toDataURL(); a.download='coloring.png'; a.click();
 }
-
 function clearCanvas(){
-  drawImageScaled();
-  push();
+  initCanvas();
 }
 
 init();
