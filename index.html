@@ -6,13 +6,15 @@
   <style>
     html,body{margin:0;padding:0;height:100%;overflow:hidden;touch-action:none;font-family:Comic Sans MS;background:#fff6e0}
     #home,#library,#pageSelect,#drawing{display:none;flex-direction:column;width:100%;height:100%}
-    #home{display:flex;justify-content:space-around;align-items:center;background:linear-gradient(to bottom right,#ffdee9,#b5fffc)}
+    #home{display:flex;justify-content:space-around;align-items:center;padding:20px;background:linear-gradient(to bottom right,#ffdee9,#b5fffc)}
     .home-btn{width:160px;text-align:center}
     .home-btn img{width:100%;display:block;margin-bottom:6px}
     .home-btn div{font-weight:bold}
     #library h2,#pageSelect h2{font-size:24px;font-weight:bold;padding:8px;text-align:center}
     #library,#pageSelect{flex:1;overflow:auto;align-items:center;padding:10px}
     #library img,#pageSelect img{width:150px;margin:10px;border:3px solid #f06292;border-radius:10px;cursor:pointer}
+    .thumb-container{position:relative; display:inline-block; margin:10px;}
+    .delete-btn{position:absolute;top:4px;right:4px;padding:2px 6px;font-size:12px;background:red;color:white;border:none;border-radius:4px;cursor:pointer;}
     #drawing{display:flex;flex-direction:column;height:100%;position:relative}
     #backBtn{position:absolute;top:10px;left:10px;padding:6px;font-size:16px;z-index:10}
     #top-bar{display:flex;flex-wrap:wrap;gap:8px;padding:8px;background:#ffe0f0;justify-content:center}
@@ -23,7 +25,7 @@
     .tool,.color{width:36px;height:36px;display:flex;align-items:center;justify-content:center}
     .color{border:3px solid #333}
     .active{border:3px solid #ff4081!important}
-    #libBack{padding:6px;font-size:16px;margin:10px}
+    #libBack{padding:6px;font-size:16px;margin:10px;align-self:flex-start}
   </style>
 </head>
 <body>
@@ -57,9 +59,7 @@
     <button onclick="download()">⬇ Download</button>
     <button onclick="clearCanvas()">🗑 Clear</button>
   </div>
-  <div id="canvas-container">
-    <canvas id="canvas"></canvas>
-  </div>
+  <div id="canvas-container"><canvas id="canvas"></canvas></div>
   <div id="bottom-bar">
     <div class="tool" data-tool="bucket">🪣</div>
     <div class="tool" data-tool="eraser">🧽</div>
@@ -70,18 +70,15 @@
 
 <script>
 const STORAGE_KEY='myColorLib';
-let saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d');
-const img = new Image(); img.crossOrigin = 'anonymous';
-const clickSound = document.getElementById('clickSound');
+let saved = JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+const canvas=document.getElementById('canvas'), ctx=canvas.getContext('2d');
+const img=new Image(); img.crossOrigin='anonymous';
+const clickSound=document.getElementById('clickSound');
 
-let tool='bucket', color='black', scale=1, tx=0, ty=0, isDrag=false, start=null, lastDist=null;
-const undoStack=[], redoStack=[];
-const colors=['black','gray','red','orange','yellow','green','blue','purple','pink','peach','tan','brown','white','cyan','magenta','navy','#8B0000','#00CED1','#ADFF2F','#FF1493','#800080','#FFD700','#00FF7F','#DC143C','skin','skyblue'];
+let tool='bucket',color='black',scale=1,tx=0,ty=0,isDrag=false,start=null,lastDist=null;
+const undoStack=[],redoStack=[];
+const colors=['blue','skyblue','cyan','indigo','purple','violet','brown','red','orange','yellow','green','dark green','pink','light pink','skin','black','white','grey'];
 const drawings=[
-  'https://i.postimg.cc/TPZTn08W/0f00c43f3775ba5fcce443f4885aa56e.jpg',
-  'https://i.postimg.cc/JnZMxXmY/bunny-carrot-coloring-page-600nw-2414476443.jpg',
-  'https://i.postimg.cc/Bv8q8yz0/36-girl-with-butterfly-wings-to-color.jpg',
   'https://i.postimg.cc/TPZTn08W/0f00c43f3775ba5fcce443f4885aa56e.jpg',
   'https://i.postimg.cc/JnZMxXmY/bunny-carrot-coloring-page-600nw-2414476443.jpg',
   'https://i.postimg.cc/Bv8q8yz0/36-girl-with-butterfly-wings-to-color.jpg',
@@ -98,166 +95,134 @@ const drawings=[
 ];
 
 function init(){
-  const pagesDiv=document.getElementById('pages');
+  const pages=document.getElementById('pages');
   drawings.forEach((src,i)=>{
     const im=document.createElement('img');
     im.src=src;
     im.onclick=()=>loadPage(i);
-    pagesDiv.appendChild(im);
+    pages.appendChild(im);
   });
-  updateLibrary();
+  renderLibrary();
   const bottom=document.getElementById('bottom-bar');
   colors.forEach(c=>{
     const d=document.createElement('div');
-    d.className='color';
-    d.style.background=c;
+    d.className='color'; d.style.background=c;
     d.onclick=()=>{color=c;updateUI();clickSound.currentTime=0;clickSound.play()};
     bottom.appendChild(d);
   });
   document.querySelectorAll('.tool').forEach(t=>{
     t.onclick=()=>{
-      tool=t.dataset.tool;
-      updateUI();
-      clickSound.currentTime=0;
-      clickSound.play();
+      tool=t.dataset.tool; updateUI(); clickSound.currentTime=0; clickSound.play();
     };
   });
   updateUI();
-  window.addEventListener('resize', resizeCanvas);
+  window.addEventListener('resize',resizeCanvas);
   showHome();
 }
 
-function updateLibrary(){
+function renderLibrary(){
   const div=document.getElementById('savedImgs');
   div.innerHTML='';
-  saved.forEach(src=>{
-    const im=document.createElement('img');
-    im.src=src;
-    div.appendChild(im);
+  saved.forEach((src,i)=>{
+    const cont=document.createElement('div');
+    cont.className='thumb-container';
+    const im=document.createElement('img'); im.src=src;
+    const del=document.createElement('button');
+    del.className='delete-btn'; del.textContent='X';
+    del.onclick=()=>{
+      saved.splice(i,1);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(saved)); renderLibrary();
+    };
+    cont.appendChild(im); cont.appendChild(del); div.appendChild(cont);
   });
 }
 
-function hideAll(){
-  ['home','drawing','library','pageSelect'].forEach(id=>document.getElementById(id).style.display='none');
-}
+function hideAll(){['home','drawing','library','pageSelect'].forEach(id=>document.getElementById(id).style.display='none');}
 function showHome(){hideAll();document.getElementById('home').style.display='flex'}
-function showLibrary(){hideAll();updateLibrary();document.getElementById('library').style.display='flex'}
+function showLibrary(){hideAll();renderLibrary();document.getElementById('library').style.display='flex'}
 function showPageSelect(){hideAll();document.getElementById('pageSelect').style.display='flex'}
 
 function loadPage(i){
-  hideAll();
-  document.getElementById('drawing').style.display='flex';
+  hideAll(); document.getElementById('drawing').style.display='flex';
   img.onload=()=>{
-    resizeCanvas();
-    resetTransform();
-    drawImageScaled();
-    push();
+    resizeCanvas(); reset(); drawImageScaled(); push();
   };
   img.src=drawings[i]+'?v='+Date.now();
 }
 
 function resizeCanvas(){
   const r=document.getElementById('canvas-container').getBoundingClientRect();
-  canvas.width=r.width;
-  canvas.height=r.height;
+  canvas.width=r.width; canvas.height=r.height;
 }
 
-function resetTransform(){
-  scale=1;tx=0;ty=0;
-  canvas.style.transform='';
-}
-
+function reset(){scale=1; tx=0; ty=0; canvas.style.transform='';}
 function updateUI(){
   document.querySelectorAll('.tool').forEach(el=>el.classList.toggle('active',el.dataset.tool===tool));
   document.querySelectorAll('.color').forEach(el=>el.classList.toggle('active',el.style.background===color));
 }
 
-canvas.addEventListener('mousedown',e=>{isDrag=true;start={x:e.clientX,y:e.clientY}});
-canvas.addEventListener('mousemove',e=>{if(isDrag){tx+=e.clientX-start.x;ty+=e.clientY-start.y;start={x:e.clientX,y:e.clientY};apply();}});
-canvas.addEventListener('mouseup',_=>isDrag=false);
-canvas.addEventListener('mouseleave',_=>isDrag=false);
-
+canvas.onmousedown=e=>{isDrag=true; start={x:e.clientX,y:e.clientY};};
+canvas.onmousemove=e=>{if(isDrag){tx+=e.clientX-start.x;ty+=e.clientY-start.y;start={x:e.clientX,y:e.clientY};apply();}};
+canvas.onmouseup=canvas.onmouseleave=_=>isDrag=false;
 canvas.addEventListener('touchstart',e=>{
-  if(e.touches.length===1){isDrag=true;start={x:e.touches[0].clientX,y:e.touches[0].clientY}}
-  if(e.touches.length===2){lastDist=getDist(e);start=getMid(e);}
+  if(e.touches.length===1){isDrag=true; start={x:e.touches[0].clientX,y:e.touches[0].clientY};}
+  else if(e.touches.length===2){lastDist=getDist(e);start=getMid(e);}
 });
 canvas.addEventListener('touchmove',e=>{
   e.preventDefault();
-  if(e.touches.length===1 && isDrag){
-    tx+=e.touches[0].clientX-start.x;
-    ty+=e.touches[0].clientY-start.y;
-    start={x:e.touches[0].clientX,y:e.touches[0].clientY};
-    apply();
+  if(e.touches.length===1&&isDrag){
+    tx+=e.touches[0].clientX-start.x; ty+=e.touches[0].clientY-start.y;
+    start={x:e.touches[0].clientX,y:e.touches[0].clientY}; apply();
   } else if(e.touches.length===2){
-    const nd=getDist(e);
-    const m=getMid(e);
-    let f=1 + (nd/lastDist -1)/10;
-    const bx=(m.x - tx)/scale, by=(m.y - ty)/scale;
-    scale*=f;
-    tx=m.x - bx*scale;
-    ty=m.y - by*scale;
-    lastDist=nd;
-    apply();
+    const nd=getDist(e), m=getMid(e);
+    let f=1+(nd/lastDist-1)/10;
+    const bx=(m.x-tx)/scale, by=(m.y-ty)/scale;
+    scale*=f; tx=m.x-bx*scale; ty=m.y-by*scale; lastDist=nd; apply();
   }
 },{passive:false});
-canvas.addEventListener('touchend',_=>{
-  isDrag=false;
-  if((event.touches||[]).length<2) lastDist=null;
-});
-
-function getDist(e){return Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);}
-function getMid(e){return {x:(e.touches[0].clientX+e.touches[1].clientX)/2, y:(e.touches[0].clientY+e.touches[1].clientY)/2};}
-function apply(){
-  canvas.style.transform=`translate(${tx}px,${ty}px) scale(${scale})`;
-  canvas.style.transformOrigin='0 0';
-}
-
-canvas.addEventListener('click',e=>{
+canvas.addEventListener('touchend',_=>{isDrag=false;if((event.touches||[]).length<2) lastDist=null;});
+canvas.onclick=e=>{
   if(!img.src) return;
   const rect=canvas.getBoundingClientRect();
-  const sx=e.clientX-rect.left;
-  const sy=e.clientY-rect.top;
+  const sx=e.clientX-rect.left, sy=e.clientY-rect.top;
   const inv=ctx.getTransform().invertSelf();
-  const pt=inv.transformPoint(new DOMPoint(sx,sy));
+  const pt=inv.transformPoint(new DOMPoint(sx- tx, sy- ty));
   const x=Math.floor(pt.x), y=Math.floor(pt.y);
-  clickSound.currentTime=0;clickSound.play();
-
-  const id=ctx.getImageData(0,0,canvas.width,canvas.height),d=id.data;
+  clickSound.currentTime=0; clickSound.play();
+  const id=ctx.getImageData(0,0,canvas.width,canvas.height), d=id.data;
   const bg={r:255,g:246,b:224,a:255};
-  if(tool==='bucket') flood(d,x,y,hexToRGBA(color),25,canvas.width,canvas.height);
+  if(tool==='bucket') flood(d,x,y,hex(c),25,canvas.width,canvas.height);
   else flood(d,x,y,bg,25,canvas.width,canvas.height);
-  ctx.putImageData(id,0,0);
-  push();
-});
+  ctx.putImageData(id,0,0); push();
+};
+
+function getDist(e){return Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);}
+function getMid(e){return {x:(e.touches[0].clientX+e.touches[1].clientX)/2, y:(e.touches[0].clientY+e.touches[1].clientY)/2};}
+function apply(){canvas.style.transform=`translate(${tx}px,${ty}px) scale(${scale})`;canvas.style.transformOrigin='0 0';}
 
 function flood(data,x,y,c,t,w,h){
-  const si=(y*w+x)*4;
-  const base=data.slice(si,si+4);
+  const si=(y*w+x)*4, base=data.slice(si,si+4);
   const match=px=>px.every((v,i)=>Math.abs(v-base[i])<t);
-  const stack=[{x,y}],vis=new Uint8Array(w*h);
-  while(stack.length){
-    const p=stack.pop(),i=(p.y*w+p.x)*4;
+  const st=[{x,y}], vis=new Uint8Array(w*h);
+  while(st.length){
+    const p=st.pop(), i=(p.y*w+p.x)*4;
     if(p.x<0||p.x>=w||p.y<0||p.y>=h||vis[p.y*w+p.x]||!match(data.slice(i,i+4))) continue;
     vis[p.y*w+p.x]=1;
     data[i]=c.r;data[i+1]=c.g;data[i+2]=c.b;data[i+3]=c.a;
-    stack.push({x:p.x+1,y:p.y},{x:p.x-1,y:p.y},{x:p.x,y:p.y+1},{x:p.x,y:p.y-1});
+    st.push({x:p.x+1,y:p.y},{x:p.x-1,y:p.y},{x:p.x,y:p.y+1},{x:p.x,y:p.y-1});
   }
 }
 
-function hexToRGBA(hex){
-  const tmp=document.createElement('div');
-  tmp.style.color=hex;
-  document.body.appendChild(tmp);
+function hex(c){
+  const tmp=document.createElement('div');tmp.style.color=c;document.body.appendChild(tmp);
   const [r,g,b]=getComputedStyle(tmp).color.match(/\d+/g).map(Number);
   document.body.removeChild(tmp);
   return {r,g,b,a:255};
 }
 
 function drawImageScaled(){
-  const cw=canvas.width,ch=canvas.height;
-  const iw=img.width, ih=img.height;
-  const r=Math.min(cw/iw,ch/ih);
-  const x=(cw-iw*r)/2, y=(ch-ih*r)/2;
+  const cw=canvas.width,ch=canvas.height, iw=img.width, ih=img.height;
+  const r=Math.min(cw/iw,ch/ih), x=(cw-iw*r)/2, y=(ch-ih*r)/2;
   ctx.setTransform(1,0,0,1,0,0);
   ctx.clearRect(0,0,cw,ch);
   ctx.drawImage(img,0,0,iw,ih,x,y,iw*r,ih*r);
@@ -268,46 +233,24 @@ function push(){
   if(undoStack.length>30) undoStack.shift();
   redoStack.length=0;
 }
-
-function undo(){
-  if(undoStack.length<2) return;
-  redoStack.push(undoStack.pop());
-  restore(undoStack.at(-1));
-}
-
-function redo(){
-  if(!redoStack.length) return;
-  const d=redoStack.pop();
-  undoStack.push(d);
-  restore(d);
-}
-
+function undo(){if(undoStack.length<2)return;redoStack.push(undoStack.pop());restore(undoStack.at(-1));}
+function redo(){if(!redoStack.length)return;const d=redoStack.pop();undoStack.push(d);restore(d);}
 function restore(src){
-  const i=new Image();
-  i.onload=()=>{
-    ctx.drawImage(i,0,0);
-    resetTransform();
-    apply();
-  };
-  i.src=src;
+  const i=new Image();i.onload=()=>{ctx.drawImage(i,0,0);reset();apply();};i.src=src;
 }
 
 function save(){
   saved.push(canvas.toDataURL());
   localStorage.setItem(STORAGE_KEY,JSON.stringify(saved));
+  renderLibrary();
   alert('Saved!');
 }
-
 function download(){
   const a=document.createElement('a');
-  a.href=canvas.toDataURL();
-  a.download='coloring.png';
-  a.click();
+  a.href=canvas.toDataURL(); a.download='coloring.png'; a.click();
 }
-
 function clearCanvas(){
-  drawImageScaled();
-  push();
+  drawImageScaled(); push();
 }
 
 init();
