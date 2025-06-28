@@ -1,74 +1,143 @@
 <!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Coloring App</title>
   <style>
-    html,body {margin:0;padding:0;height:100%;overflow:hidden;font-family:Comic Sans MS;background:#fff6e0}
-    #home,#library,#pageSelect,#drawing {
-      display:none; flex-direction:column; width:100%; height:100%;
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      font-family: Comic Sans MS;
+      background: #fff6e0;
+    }
+    #home, #library, #pageSelect, #drawing {
+      display: none;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
     }
     #home {
-      display:flex; justify-content:space-around; align-items:center;
-      padding:20px; background:linear-gradient(to bottom,#ffc0cb,#ffe4e1);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 20px;
+      background: linear-gradient(to bottom, #ffdde9, #ffcde2);
     }
-    .home-btn {width:160px;text-align:center;cursor:pointer}
-    .home-btn img {width:100%;margin-bottom:6px}
-    .home-btn div {font-weight:bold}
-    #pageSelect h2,#library h2 {
-      font-size:24px;padding:10px;text-align:center;
+    .home-btn {
+      width: 160px;
+      text-align: center;
+      cursor: pointer;
     }
-    #pages,#savedImgs {
-      flex:1;overflow:auto;display:flex;flex-wrap:wrap;justify-content:center;
+    .home-btn img {
+      width: 100%;
+      margin-bottom: 6px;
     }
-    #pages img,#savedImgs img {
-      width:150px;margin:10px;border:3px solid #f06292;border-radius:10px;cursor:pointer;
+    .home-btn div {
+      font-weight: bold;
+      color: #d63384;
+      font-size: 18px;
+    }
+    #pageSelect h2, #library h2 {
+      font-size: 24px;
+      padding: 10px;
+      text-align: center;
+    }
+    #pages, #savedImgs {
+      flex: 1;
+      overflow: auto;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    #pages img, #savedImgs img {
+      width: 150px;
+      margin: 10px;
+      border: 3px solid #f06292;
+      border-radius: 10px;
+      cursor: pointer;
     }
     .thumb-container {
-      position:relative;display:inline-block;margin:10px;
+      position: relative;
+      display: inline-block;
+      margin: 10px;
     }
     .delete-btn {
-      position:absolute;top:4px;right:4px;background:red;color:white;
-      border:none;border-radius:4px;padding:2px 6px;cursor:pointer;
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: red;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 2px 6px;
+      cursor: pointer;
     }
-    #libBack,#backBtn {
-      padding:6px;font-size:16px;margin:10px;cursor:pointer;
+    #libBack, #backBtn {
+      padding: 6px;
+      font-size: 16px;
+      margin: 10px;
+      cursor: pointer;
     }
     #drawing {
-      display:none;flex-direction:column;height:100%;position:relative;
+      display: none;
+      flex-direction: column;
+      height: 100%;
+      position: relative;
     }
     #top-bar {
-      display:flex;gap:8px;padding:8px;background:#ffe0f0;
-      flex-wrap:wrap;justify-content:center;
+      display: flex;
+      gap: 8px;
+      padding: 8px;
+      background: #ffe0f0;
+      flex-wrap: wrap;
+      justify-content: center;
     }
     #canvas-container {
-      flex:1;overflow:hidden;background:#fff;border-top:2px solid #ccc;
+      flex: 1;
+      overflow: hidden;
+      background: #fff;
       position: relative;
     }
     canvas {
-      position:absolute;
-      top:50%; left:50%;
-      transform:translate(-50%, -50%) scale(1);
+      border-radius: 10px;
+      touch-action: none;
       transform-origin: center center;
-      touch-action:none;
     }
     #bottom-bar {
-      display:flex;gap:8px;overflow-x:auto;padding:8px;background:#ffe0f0;
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 8px;
+      background: #ffe0f0;
     }
-    .tool,.color,button {
-      padding:6px;font-size:16px;border:none;border-radius:10px;
-      cursor:pointer;background:#f06292;color:#fff;
-      box-shadow:2px 2px 6px rgba(0,0,0,0.2);
+    .tool, .color, button {
+      padding: 6px;
+      font-size: 16px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      background: #f06292;
+      color: #fff;
+      box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.2);
     }
-    .tool,.color {
-      width:36px;height:36px;display:flex;align-items:center;justify-content:center;
+    .tool, .color {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-    .color {border:3px solid #333}
-    .active {border:3px solid #ff4081!important}
+    .color {
+      border: 3px solid #333;
+    }
+    .active {
+      border: 3px solid #ff4081 !important;
+    }
   </style>
 </head>
-<body>
-<div id="home">
+<body><div id="home">
   <div class="home-btn" onclick="showPageSelect()">
     <img src="https://img.icons8.com/clouds/200/000000/paint-palette.png"/>
     <div>Coloring Book</div>
@@ -77,17 +146,14 @@
     <img src="https://img.icons8.com/clouds/200/000000/opened-folder.png"/>
     <div>My Album</div>
   </div>
-</div>
-<div id="pageSelect">
+</div><div id="pageSelect">
   <h2>Coloring Book</h2>
   <div id="pages"></div>
-</div>
-<div id="library">
+</div><div id="library">
   <button id="libBack" onclick="showHome()">⬅ Back</button>
   <h2>My Album</h2>
   <div id="savedImgs"></div>
-</div>
-<div id="drawing">
+</div><div id="drawing">
   <button id="backBtn" onclick="showHome()">⬅</button>
   <div id="top-bar">
     <button onclick="undo()">⎌ Undo</button>
@@ -96,13 +162,15 @@
     <button onclick="download()">⬇ Download</button>
     <button onclick="clearCanvas()">🗑 Clear</button>
   </div>
-  <div id="canvas-container"><canvas id="canvas"></canvas></div>
+  <div id="canvas-container">
+    <canvas id="canvas"></canvas>
+  </div>
   <div id="bottom-bar">
     <div class="tool" data-tool="bucket">🪣</div>
     <div class="tool" data-tool="eraser">🧽</div>
   </div>
-</div>
-<audio id="clickSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_059f6bff69.mp3?filename=click-124467.mp3"></audio>
+</div><audio id="clickSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_059f6bff69.mp3?filename=click-124467.mp3"></audio>
+
 <script>
 const STORAGE_KEY='myColorLib';
 let saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
@@ -111,20 +179,30 @@ const img=new Image(); img.crossOrigin='anonymous';
 const clickSound=document.getElementById('clickSound');
 let tool='bucket', color='black';
 let undoStack=[], redoStack=[];
-let scale = 1, minScale = 1, maxScale = 5;
-let isDragging = false, lastX = 0, lastY = 0;
+let scale = 1, startX = 0, startY = 0, panX = 0, panY = 0, isPanning = false;
+
+const colors=['black','white','gray','red','orange','yellow','green','blue','purple','pink','peach','tan','brown','skin','white','cyan','magenta','navy','#8B0000','#00CED1','#ADFF2F','#FF1493','eed7c7','lavender','maroon','crimson','wheat','lime','gold','chocolate','teal','orchid','navy','silver'];
 const drawings=[
   'https://i.postimg.cc/TPZTn08W/0f00c43f3775ba5fcce443f4885aa56e.jpg',
   'https://i.postimg.cc/JnZMxXmY/bunny-carrot-coloring-page-600nw-2414476443.jpg',
   'https://i.postimg.cc/Bv8q8yz0/36-girl-with-butterfly-wings-to-color.jpg',
+  'https://i.postimg.cc/TPZTn08W/0f00c43f3775ba5fcce443f4885aa56e.jpg',
+  'https://i.postimg.cc/JnZMxXmY/bunny-carrot-coloring-page-600nw-2414476443.jpg',
+  'https://i.postimg.cc/Bv8q8yz0/36-girl-with-butterfly-wings-to-color.jpg',
+  'https://i.postimg.cc/Bv8q8yz0/36-girl-with-butterfly-wings-to-color.jpg',
   'https://i.postimg.cc/pLsT5KXD/6331b296558cf1f8f7fd87cc9154f432.jpg',
-  'https://i.postimg.cc/2yYmK5Sk/7113dc553901fe5719b2c9e221449e28.jpg'
+  'https://i.postimg.cc/2yYmK5Sk/7113dc553901fe5719b2c9e221449e28.jpg',
+  'https://i.postimg.cc/MKxKs9n7/adorable-fun-kids-coloring-page-delight-freepik-908673-3027.jpg',
+  'https://i.postimg.cc/MKxKs9n7/adorable-fun-kids-coloring-page-delight-freepik-908673-3027.jpg',
+  'https://i.postimg.cc/jS1TrcSk/Barbie-10.jpg',
+  'https://i.postimg.cc/FsDmTN5v/Barbie-24.jpg',
+  'https://i.postimg.cc/FsDmTN5v/Barbie-24.jpg',
+  'https://i.postimg.cc/j2YdYXZr/Barbie-27.jpg',
+  'https://i.postimg.cc/tTxCcfd5/Barbie-6.jpg'
 ];
-const colors=['black','gray','red','orange','yellow','green','blue','purple','pink','peach','tan','brown','skin','white','cyan','magenta','navy','#8B0000','#00CED1','#ADFF2F','#FF1493','eed7c7','lavender','maroon','crimson','wheat','lime','gold','chocolate','teal','orchid','navy','silver'];
-function showHome(){hideAll();document.getElementById('home').style.display='flex';}
-function showPageSelect(){hideAll();document.getElementById('pageSelect').style.display='flex';}
-function showLibrary(){hideAll();renderLibrary();document.getElementById('library').style.display='flex';}
-function hideAll(){['home','pageSelect','library','drawing'].forEach(id=>document.getElementById(id).style.display='none');}
+
+window.addEventListener('resize',()=> canvas._loaded && initCanvas());
+
 function init(){
   const pagesDiv=document.getElementById('pages');
   drawings.forEach((src,i)=>{
@@ -142,78 +220,81 @@ function init(){
   document.querySelectorAll('.tool').forEach(t=>{
     t.onclick=()=>{tool=t.dataset.tool; updateUI(); clickSound.currentTime=0; clickSound.play()};
   });
+  canvas.addEventListener('pointerdown', startPan);
+  canvas.addEventListener('pointermove', pan);
+  canvas.addEventListener('pointerup', endPan);
+  canvas.addEventListener('wheel', zoom);
+  canvas.addEventListener('click', colorAtPoint);
   updateUI(); showHome();
 }
+
 function updateUI(){
   document.querySelectorAll('.tool').forEach(el=> el.classList.toggle('active', el.dataset.tool===tool));
   document.querySelectorAll('.color').forEach(el=> el.classList.toggle('active', el.style.background===color));
 }
 function renderLibrary(){
-  const div=document.getElementById('savedImgs'); div.innerHTML='';
+  const div=document.getElementById('savedImgs');
+  div.innerHTML='';
   saved.forEach((src,i)=>{
     const cont=document.createElement('div'); cont.className='thumb-container';
     const im=new Image(); im.src=src;
     const del=document.createElement('button'); del.className='delete-btn'; del.textContent='X';
-    del.onclick=()=>{saved.splice(i,1);localStorage.setItem(STORAGE_KEY,JSON.stringify(saved));renderLibrary();};
+    del.onclick=()=>{
+      saved.splice(i,1);
+      localStorage.setItem(STORAGE_KEY,JSON.stringify(saved));
+      renderLibrary();
+    };
     cont.appendChild(im); cont.appendChild(del);
     div.appendChild(cont);
   });
 }
-function loadPage(i){
-  hideAll(); document.getElementById('drawing').style.display='flex';
-  img.onload=()=>{scale=1;canvas.style.transform=`translate(-50%, -50%) scale(${scale})`;initCanvas();};
-  img.src=drawings[i]+'?v='+Date.now();
-}
+function hideAll(){ ['home','pageSelect','library','drawing'].forEach(id=>document.getElementById(id).style.display='none'); }
+function showHome(){ hideAll(); document.getElementById('home').style.display='flex'; }
+function showPageSelect(){ hideAll(); document.getElementById('pageSelect').style.display='flex'; }
+function showLibrary(){ hideAll(); renderLibrary(); document.getElementById('library').style.display='flex'; }
+function loadPage(i){ hideAll(); document.getElementById('drawing').style.display='flex'; img.onload=initCanvas; img.src=drawings[i]+'?v='+Date.now(); }
+
 function initCanvas(){
   canvas._loaded=true;
   const r=document.getElementById('canvas-container').getBoundingClientRect();
   canvas.width=r.width; canvas.height=r.height;
-  ctx.setTransform(1,0,0,1,0,0);
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.drawImage(img,0,0,canvas.width,canvas.height);
-  undoStack=[]; redoStack=[]; push();
+  push();
 }
-canvas.addEventListener('click',e=>{
-  if(!canvas._loaded) return;
+
+function colorAtPoint(e){
   const rect = canvas.getBoundingClientRect();
-  const cx = (e.clientX - rect.left) * canvas.width / rect.width;
-  const cy = (e.clientY - rect.top) * canvas.height / rect.height;
+  const x = (e.clientX - rect.left - panX) / scale;
+  const y = (e.clientY - rect.top - panY) / scale;
+  if(!canvas._loaded) return;
   clickSound.currentTime=0; clickSound.play();
   const id=ctx.getImageData(0,0,canvas.width,canvas.height), d=id.data;
   const bg={r:255,g:246,b:224,a:255};
-  tool==='bucket' ? flood(d,Math.floor(cx),Math.floor(cy),hexToRGBA(color),25,canvas.width,canvas.height)
-                  : flood(d,Math.floor(cx),Math.floor(cy),bg,25,canvas.width,canvas.height);
+  const cx=Math.floor(x), cy=Math.floor(y);
+  tool==='bucket'
+    ? flood(d,cx,cy,hexToRGBA(color),25,canvas.width,canvas.height)
+    : flood(d,cx,cy,bg,25,canvas.width,canvas.height);
   ctx.putImageData(id,0,0); push();
-});
-canvas.addEventListener('wheel',e=>{
-  e.preventDefault();
-  scale += e.deltaY * -0.001;
-  scale = Math.min(Math.max(scale, minScale), maxScale);
-  canvas.style.transform=`translate(-50%, -50%) scale(${scale})`;
-});
-canvas.addEventListener('pointerdown',e=>{
-  isDragging = true;
-  lastX = e.clientX;
-  lastY = e.clientY;
-});
-canvas.addEventListener('pointermove',e=>{
-  if (!isDragging) return;
-  const dx = e.clientX - lastX;
-  const dy = e.clientY - lastY;
-  lastX = e.clientX;
-  lastY = e.clientY;
-  const transform = canvas.style.transform.match(/translate(-?\d+\.?\d*)%?,\s*(-?\d+\.?\d*)%? scale([^)]+)/);
-  let tx = parseFloat(transform[1]), ty = parseFloat(transform[2]);
-  tx += dx / canvas.clientWidth * 100;
-  ty += dy / canvas.clientHeight * 100;
-  canvas.style.transform = `translate(${tx}%, ${ty}%) scale(${scale})`;
-});
-canvas.addEventListener('pointerup',()=>{ isDragging = false; });
-function hexToRGBA(hex){
-  const tmp=document.createElement('div'); tmp.style.color=hex; document.body.appendChild(tmp);
-  const [r,g,b]=getComputedStyle(tmp).color.match(/\d+/g).map(Number); tmp.remove();
-  return {r,g,b,a:255};
 }
+
+function startPan(e){ isPanning = true; startX = e.clientX; startY = e.clientY; }
+function pan(e){
+  if (!isPanning) return;
+  panX += e.clientX - startX; panY += e.clientY - startY;
+  startX = e.clientX; startY = e.clientY;
+  canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+}
+function endPan(){ isPanning = false; }
+function zoom(e){
+  e.preventDefault();
+  const delta = e.deltaY < 0 ? 1.1 : 0.9;
+  const newScale = scale * delta;
+  if (newScale < 1) return; // prevent zoom out below 100%
+  scale = newScale;
+  canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+}
+
 function flood(data,x,y,c,t,w,h){
   const si=(y*w+x)*4, base=data.slice(si,si+4);
   const match=px=>px.every((v,i)=>Math.abs(v-base[i])<t);
@@ -226,21 +307,15 @@ function flood(data,x,y,c,t,w,h){
     stack.push({x:p.x+1,y:p.y},{x:p.x-1,y:p.y},{x:p.x,y:p.y+1},{x:p.x,y:p.y-1});
   }
 }
+function hexToRGBA(hex){ const tmp=document.createElement('div'); tmp.style.color=hex; document.body.appendChild(tmp); const [r,g,b]=getComputedStyle(tmp).color.match(/\d+/g).map(Number); tmp.remove(); return {r,g,b,a:255}; }
 function push(){ undoStack.push(canvas.toDataURL()); if(undoStack.length>30) undoStack.shift(); redoStack=[]; }
 function undo(){ if(undoStack.length<2) return; redoStack.push(undoStack.pop()); restore(undoStack.at(-1)); }
 function redo(){ if(!redoStack.length) return; const d=redoStack.pop(); undoStack.push(d); restore(d); }
-function restore(src){
-  const i = new Image();
-  i.onload = () => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(i, 0, 0, canvas.width, canvas.height);
-  };
-  i.src = src;
-  }
+function restore(src){ const i=new Image(); i.onload=()=>{ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(i,0,0,canvas.width,canvas.height);}; i.src=src; }
 function save(){ saved.push(canvas.toDataURL()); localStorage.setItem(STORAGE_KEY,JSON.stringify(saved)); renderLibrary(); alert('Saved!'); }
 function download(){ const a=document.createElement('a'); a.href=canvas.toDataURL(); a.download='coloring.png'; a.click(); }
 function clearCanvas(){ initCanvas(); }
+
 init();
-</script>
-</body>
-</html>
+</script></body>
+      </html>
