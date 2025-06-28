@@ -229,7 +229,14 @@ function flood(data,x,y,c,t,w,h){
 function push(){ undoStack.push(canvas.toDataURL()); if(undoStack.length>30) undoStack.shift(); redoStack=[]; }
 function undo(){ if(undoStack.length<2) return; redoStack.push(undoStack.pop()); restore(undoStack.at(-1)); }
 function redo(){ if(!redoStack.length) return; const d=redoStack.pop(); undoStack.push(d); restore(d); }
-function restore(src){ const i=new Image(); i.onload=initCanvas; i.src=src; }
+function restore(src){
+  const i = new Image();
+  i.onload = () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(i, 0, 0, canvas.width, canvas.height);
+  };
+  i.src = src;
+  }
 function save(){ saved.push(canvas.toDataURL()); localStorage.setItem(STORAGE_KEY,JSON.stringify(saved)); renderLibrary(); alert('Saved!'); }
 function download(){ const a=document.createElement('a'); a.href=canvas.toDataURL(); a.download='coloring.png'; a.click(); }
 function clearCanvas(){ initCanvas(); }
