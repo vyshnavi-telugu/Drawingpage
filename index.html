@@ -1,7 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
-  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Coloring App</title>
   <style>
     html,body {margin:0;padding:0;height:100%;overflow:hidden;font-family:Comic Sans MS;background:#fff6e0}
@@ -10,16 +10,13 @@
     }
     #home {
       display:flex; justify-content:space-around; align-items:center;
-      padding:20px; background:linear-gradient(to bottom,#ffdee9,#b5fffc);
+      padding:20px; background:linear-gradient(to bottom,#ffc0cb,#ffe4e1);
     }
     .home-btn {width:160px;text-align:center;cursor:pointer}
     .home-btn img {width:100%;margin-bottom:6px}
     .home-btn div {font-weight:bold}
     #pageSelect h2,#library h2 {
       font-size:24px;padding:10px;text-align:center;
-    }
-    #pageSelect,#library {
-      display:none;flex-direction:column;height:100%;
     }
     #pages,#savedImgs {
       flex:1;overflow:auto;display:flex;flex-wrap:wrap;justify-content:center;
@@ -37,7 +34,6 @@
     #libBack,#backBtn {
       padding:6px;font-size:16px;margin:10px;cursor:pointer;
     }
-    /* Drawing screen styles */
     #drawing {
       display:none;flex-direction:column;height:100%;position:relative;
     }
@@ -47,9 +43,14 @@
     }
     #canvas-container {
       flex:1;overflow:hidden;background:#fff;border-top:2px solid #ccc;
+      position: relative;
     }
     canvas {
-      width:100%;height:100%;border-radius:10px;touch-action:none;
+      position:absolute;
+      top:50%; left:50%;
+      transform:translate(-50%, -50%) scale(1);
+      transform-origin: center center;
+      touch-action:none;
     }
     #bottom-bar {
       display:flex;gap:8px;overflow-x:auto;padding:8px;background:#ffe0f0;
@@ -67,7 +68,6 @@
   </style>
 </head>
 <body>
-
 <div id="home">
   <div class="home-btn" onclick="showPageSelect()">
     <img src="https://img.icons8.com/clouds/200/000000/paint-palette.png"/>
@@ -78,18 +78,15 @@
     <div>My Album</div>
   </div>
 </div>
-
 <div id="pageSelect">
   <h2>Coloring Book</h2>
   <div id="pages"></div>
 </div>
-
 <div id="library">
   <button id="libBack" onclick="showHome()">⬅ Back</button>
   <h2>My Album</h2>
   <div id="savedImgs"></div>
 </div>
-
 <div id="drawing">
   <button id="backBtn" onclick="showHome()">⬅</button>
   <div id="top-bar">
@@ -105,40 +102,29 @@
     <div class="tool" data-tool="eraser">🧽</div>
   </div>
 </div>
-
 <audio id="clickSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_059f6bff69.mp3?filename=click-124467.mp3"></audio>
-
 <script>
 const STORAGE_KEY='myColorLib';
 let saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
 const canvas=document.getElementById('canvas'), ctx=canvas.getContext('2d');
 const img=new Image(); img.crossOrigin='anonymous';
 const clickSound=document.getElementById('clickSound');
-
 let tool='bucket', color='black';
 let undoStack=[], redoStack=[];
-const colors=['black','gray','red','orange','yellow','green','blue','purple','pink','peach','tan','brown','skin','white','cyan','magenta','navy','#8B0000','#00CED1','#ADFF2F','#FF1493','#eed7c7','lavender','maroon','crimson','wheat','lime','gold','chocolate','teal','orchid','navy','silver'];
+let scale = 1, minScale = 1, maxScale = 5;
+let isDragging = false, lastX = 0, lastY = 0;
 const drawings=[
   'https://i.postimg.cc/TPZTn08W/0f00c43f3775ba5fcce443f4885aa56e.jpg',
   'https://i.postimg.cc/JnZMxXmY/bunny-carrot-coloring-page-600nw-2414476443.jpg',
   'https://i.postimg.cc/Bv8q8yz0/36-girl-with-butterfly-wings-to-color.jpg',
-  'https://i.postimg.cc/TPZTn08W/0f00c43f3775ba5fcce443f4885aa56e.jpg',
-  'https://i.postimg.cc/JnZMxXmY/bunny-carrot-coloring-page-600nw-2414476443.jpg',
-  'https://i.postimg.cc/Bv8q8yz0/36-girl-with-butterfly-wings-to-color.jpg',
-  'https://i.postimg.cc/Bv8q8yz0/36-girl-with-butterfly-wings-to-color.jpg',
   'https://i.postimg.cc/pLsT5KXD/6331b296558cf1f8f7fd87cc9154f432.jpg',
-  'https://i.postimg.cc/2yYmK5Sk/7113dc553901fe5719b2c9e221449e28.jpg',
-  'https://i.postimg.cc/MKxKs9n7/adorable-fun-kids-coloring-page-delight-freepik-908673-3027.jpg',
-  'https://i.postimg.cc/MKxKs9n7/adorable-fun-kids-coloring-page-delight-freepik-908673-3027.jpg',
-  'https://i.postimg.cc/jS1TrcSk/Barbie-10.jpg',
-  'https://i.postimg.cc/FsDmTN5v/Barbie-24.jpg',
-  'https://i.postimg.cc/FsDmTN5v/Barbie-24.jpg',
-  'https://i.postimg.cc/j2YdYXZr/Barbie-27.jpg',
-  'https://i.postimg.cc/tTxCcfd5/Barbie-6.jpg'
+  'https://i.postimg.cc/2yYmK5Sk/7113dc553901fe5719b2c9e221449e28.jpg'
 ];
-
-window.addEventListener('resize',()=> canvas._loaded && initCanvas());
-
+const colors=['black','gray','red','orange','yellow','green','blue','purple','pink','peach','tan','brown','skin','white','cyan','magenta','navy','#8B0000','#00CED1','#ADFF2F','#FF1493','eed7c7','lavender','maroon','crimson','wheat','lime','gold','chocolate','teal','orchid','navy','silver'];
+function showHome(){hideAll();document.getElementById('home').style.display='flex';}
+function showPageSelect(){hideAll();document.getElementById('pageSelect').style.display='flex';}
+function showLibrary(){hideAll();renderLibrary();document.getElementById('library').style.display='flex';}
+function hideAll(){['home','pageSelect','library','drawing'].forEach(id=>document.getElementById(id).style.display='none');}
 function init(){
   const pagesDiv=document.getElementById('pages');
   drawings.forEach((src,i)=>{
@@ -156,43 +142,28 @@ function init(){
   document.querySelectorAll('.tool').forEach(t=>{
     t.onclick=()=>{tool=t.dataset.tool; updateUI(); clickSound.currentTime=0; clickSound.play()};
   });
-  updateUI();
-  showHome();
+  updateUI(); showHome();
 }
-
 function updateUI(){
   document.querySelectorAll('.tool').forEach(el=> el.classList.toggle('active', el.dataset.tool===tool));
   document.querySelectorAll('.color').forEach(el=> el.classList.toggle('active', el.style.background===color));
 }
-
 function renderLibrary(){
-  const div=document.getElementById('savedImgs');
-  div.innerHTML='';
+  const div=document.getElementById('savedImgs'); div.innerHTML='';
   saved.forEach((src,i)=>{
     const cont=document.createElement('div'); cont.className='thumb-container';
     const im=new Image(); im.src=src;
     const del=document.createElement('button'); del.className='delete-btn'; del.textContent='X';
-    del.onclick=()=>{
-      saved.splice(i,1);
-      localStorage.setItem(STORAGE_KEY,JSON.stringify(saved));
-      renderLibrary();
-    };
+    del.onclick=()=>{saved.splice(i,1);localStorage.setItem(STORAGE_KEY,JSON.stringify(saved));renderLibrary();};
     cont.appendChild(im); cont.appendChild(del);
     div.appendChild(cont);
   });
 }
-
-function hideAll(){ ['home','pageSelect','library','drawing'].forEach(id=>document.getElementById(id).style.display='none'); }
-function showHome(){ hideAll(); document.getElementById('home').style.display='flex'; }
-function showPageSelect(){ hideAll(); document.getElementById('pageSelect').style.display='flex'; }
-function showLibrary(){ hideAll(); renderLibrary(); document.getElementById('library').style.display='flex'; }
-
 function loadPage(i){
   hideAll(); document.getElementById('drawing').style.display='flex';
-  img.onload=initCanvas;
+  img.onload=()=>{scale=1;canvas.style.transform=`translate(-50%, -50%) scale(${scale})`;initCanvas();};
   img.src=drawings[i]+'?v='+Date.now();
 }
-
 function initCanvas(){
   canvas._loaded=true;
   const r=document.getElementById('canvas-container').getBoundingClientRect();
@@ -202,21 +173,47 @@ function initCanvas(){
   ctx.drawImage(img,0,0,canvas.width,canvas.height);
   undoStack=[]; redoStack=[]; push();
 }
-
 canvas.addEventListener('click',e=>{
   if(!canvas._loaded) return;
-  const xOffset=e.offsetX, yOffset=e.offsetY;
-  const cx=Math.floor(xOffset*canvas.width/canvas.clientWidth);
-  const cy=Math.floor(yOffset*canvas.height/canvas.clientHeight);
+  const rect = canvas.getBoundingClientRect();
+  const cx = (e.clientX - rect.left) * canvas.width / rect.width;
+  const cy = (e.clientY - rect.top) * canvas.height / rect.height;
   clickSound.currentTime=0; clickSound.play();
   const id=ctx.getImageData(0,0,canvas.width,canvas.height), d=id.data;
   const bg={r:255,g:246,b:224,a:255};
-  tool==='bucket'
-    ? flood(d,cx,cy,hexToRGBA(color),25,canvas.width,canvas.height)
-    : flood(d,cx,cy,bg,25,canvas.width,canvas.height);
+  tool==='bucket' ? flood(d,Math.floor(cx),Math.floor(cy),hexToRGBA(color),25,canvas.width,canvas.height)
+                  : flood(d,Math.floor(cx),Math.floor(cy),bg,25,canvas.width,canvas.height);
   ctx.putImageData(id,0,0); push();
 });
-
+canvas.addEventListener('wheel',e=>{
+  e.preventDefault();
+  scale += e.deltaY * -0.001;
+  scale = Math.min(Math.max(scale, minScale), maxScale);
+  canvas.style.transform=`translate(-50%, -50%) scale(${scale})`;
+});
+canvas.addEventListener('pointerdown',e=>{
+  isDragging = true;
+  lastX = e.clientX;
+  lastY = e.clientY;
+});
+canvas.addEventListener('pointermove',e=>{
+  if (!isDragging) return;
+  const dx = e.clientX - lastX;
+  const dy = e.clientY - lastY;
+  lastX = e.clientX;
+  lastY = e.clientY;
+  const transform = canvas.style.transform.match(/translate(-?\d+\.?\d*)%?,\s*(-?\d+\.?\d*)%? scale([^)]+)/);
+  let tx = parseFloat(transform[1]), ty = parseFloat(transform[2]);
+  tx += dx / canvas.clientWidth * 100;
+  ty += dy / canvas.clientHeight * 100;
+  canvas.style.transform = `translate(${tx}%, ${ty}%) scale(${scale})`;
+});
+canvas.addEventListener('pointerup',()=>{ isDragging = false; });
+function hexToRGBA(hex){
+  const tmp=document.createElement('div'); tmp.style.color=hex; document.body.appendChild(tmp);
+  const [r,g,b]=getComputedStyle(tmp).color.match(/\d+/g).map(Number); tmp.remove();
+  return {r,g,b,a:255};
+}
 function flood(data,x,y,c,t,w,h){
   const si=(y*w+x)*4, base=data.slice(si,si+4);
   const match=px=>px.every((v,i)=>Math.abs(v-base[i])<t);
@@ -229,46 +226,13 @@ function flood(data,x,y,c,t,w,h){
     stack.push({x:p.x+1,y:p.y},{x:p.x-1,y:p.y},{x:p.x,y:p.y+1},{x:p.x,y:p.y-1});
   }
 }
-
-function hexToRGBA(hex){
-  const tmp=document.createElement('div'); tmp.style.color=hex; document.body.appendChild(tmp);
-  const [r,g,b]=getComputedStyle(tmp).color.match(/\d+/g).map(Number); tmp.remove();
-  return {r,g,b,a:255};
-}
-
-function push(){
-  undoStack.push(canvas.toDataURL());
-  if(undoStack.length>30) undoStack.shift();
-  redoStack=[];
-}
-function undo(){
-  if(undoStack.length<2) return;
-  redoStack.push(undoStack.pop());
-  restore(undoStack.at(-1));
-}
-function redo(){
-  if(!redoStack.length) return;
-  const d=redoStack.pop();
-  undoStack.push(d);
-  restore(d);
-}
-function restore(src){
-  const i=new Image(); i.onload=initCanvas; i.src=src;
-}
-
-function save(){
-  saved.push(canvas.toDataURL());
-  localStorage.setItem(STORAGE_KEY,JSON.stringify(saved));
-  renderLibrary();
-  alert('Saved!');
-}
-function download(){
-  const a=document.createElement('a'); a.href=canvas.toDataURL(); a.download='coloring.png'; a.click();
-}
-function clearCanvas(){
-  initCanvas();
-}
-
+function push(){ undoStack.push(canvas.toDataURL()); if(undoStack.length>30) undoStack.shift(); redoStack=[]; }
+function undo(){ if(undoStack.length<2) return; redoStack.push(undoStack.pop()); restore(undoStack.at(-1)); }
+function redo(){ if(!redoStack.length) return; const d=redoStack.pop(); undoStack.push(d); restore(d); }
+function restore(src){ const i=new Image(); i.onload=initCanvas; i.src=src; }
+function save(){ saved.push(canvas.toDataURL()); localStorage.setItem(STORAGE_KEY,JSON.stringify(saved)); renderLibrary(); alert('Saved!'); }
+function download(){ const a=document.createElement('a'); a.href=canvas.toDataURL(); a.download='coloring.png'; a.click(); }
+function clearCanvas(){ initCanvas(); }
 init();
 </script>
 </body>
